@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "354777758569",
+    "firebase_url": "https://scmu-6f1b8-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "scmu-6f1b8",
+    "storage_bucket": "scmu-6f1b8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:354777758569:android:b15d8efb8e5d6d4e3d5bf8",
+        "android_client_info": {
+          "package_name": "com.example.irrig_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCXgCMDv2eyZh0Zuybv2Dsww1FwqFIAZx0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
