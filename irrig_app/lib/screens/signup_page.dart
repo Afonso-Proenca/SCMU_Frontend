@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:irrig_app/screens/login_page.dart';
 import '../widgets/primary_button.dart';
+import '../firebase/auth.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({Key? key}) : super(key: key);
@@ -23,12 +24,22 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
-  void _register() {
+  void _register() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: integrate registration logic
-      Navigator.pushReplacementNamed(context, '/main');
+      try {
+        await AuthService().register(
+          email: _emailController.text.trim(),
+          password: _passController.text.trim(),
+        );
+        Navigator.pushReplacementNamed(context, '/main');
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
