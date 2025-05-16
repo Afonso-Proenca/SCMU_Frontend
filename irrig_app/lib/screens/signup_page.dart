@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:irrig_app/screens/login_page.dart';
 import '../widgets/primary_button.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -31,6 +32,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -38,8 +40,33 @@ class _SignUpPageState extends State<SignUpPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade700, Colors.blue.shade400],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'IRRIGO App',
+                  textAlign: TextAlign.center,
+                  style: textTheme.headlineMedium!.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black26,
+                        offset: Offset(1, 1),
+                        blurRadius: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 40),
-              Image.asset('assets/signup.png', height: 160, fit: BoxFit.contain),
+              Image.asset('assets/login.png', height: 450, fit: BoxFit.cover),
               const SizedBox(height: 32),
               Form(
                 key: _formKey,

@@ -29,6 +29,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -36,9 +37,50 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 40),
-              Image.asset('assets/login.png', height: 160, fit: BoxFit.contain),
+           
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade700, Colors.blue.shade400],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'IRRIGO App',
+                  textAlign: TextAlign.center,
+                  style: textTheme.headlineMedium!.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black26,
+                        offset: Offset(1, 1),
+                        blurRadius: 2,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 32),
+
+              SizedBox(
+                height: 500, // de 180 → 240
+                width: double.infinity,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/login.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              // ---------- FORMULÁRIO ----------
               Form(
                 key: _formKey,
                 child: Column(
@@ -49,7 +91,8 @@ class _LoginPageState extends State<LoginPage> {
                         labelText: 'Username',
                         border: OutlineInputBorder(),
                       ),
-                      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Required' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -59,14 +102,19 @@ class _LoginPageState extends State<LoginPage> {
                         border: OutlineInputBorder(),
                       ),
                       obscureText: true,
-                      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Required' : null,
                     ),
                   ],
                 ),
               ),
+
               const SizedBox(height: 24),
+
               PrimaryButton(text: 'Login', onPressed: _login),
+
               const SizedBox(height: 12),
+
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -74,15 +122,10 @@ class _LoginPageState extends State<LoginPage> {
                   child: const Text("Don't have an account? Sign up"),
                 ),
               ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.g_mobiledata, size: 48),
-                  SizedBox(width: 24),
-                  Icon(Icons.apple, size: 40),
-                ],
-              )
+
+              const SizedBox(height: 32),
+
+           
             ],
           ),
         ),
