@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/primary_button.dart';
+import '../firebase/auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
@@ -10,22 +11,38 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _userController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passController = TextEditingController();
 
   @override
   void dispose() {
-    _userController.dispose();
+    _emailController.dispose();
     _passController.dispose();
     super.dispose();
   }
 
-  void _login() {
+  void _login() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: integrate template authentication logic
-      Navigator.pushReplacementNamed(context, '/main');
+      try {
+        print("Logging in...");
+        await AuthService().login(
+          email: _emailController.text.trim(),
+          password: _passController.text.trim(),
+        );
+        print("Login successful");
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/main');
+      } catch (e) {
+        print("Login error: $e");
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -86,9 +103,9 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   children: [
                     TextFormField(
-                      controller: _userController,
+                      controller: _emailController,
                       decoration: const InputDecoration(
-                        labelText: 'Username',
+                        labelText: 'Email',
                         border: OutlineInputBorder(),
                       ),
                       validator: (v) =>
