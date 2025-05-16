@@ -72,7 +72,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.asset(
-                    'assets/login.png',
+                    'assets/irrigo_app',
                     fit: BoxFit.cover,
                   ),
                 ),
