@@ -2,24 +2,27 @@ name: irrig_app
 description: Frontend Flutter app for IRRIGO smart irrigation system.
 publish_to: "none"
 version: 1.0.0+1
+
 environment:
   sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
-  firebase_auth: ^5.5.3
-  firebase_core: ^3.13.0
   flutter:
     sdk: flutter
-
   flutter_svg: ^2.0.7
   provider: ^6.0.5
+
+  # Firebase
+  firebase_core: ^3.13.0
+  firebase_auth: ^5.5.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-
 flutter:
+  uses-material-design: true
+
+  # Assets (imagens, ícones)
   assets:
     - assets/
-  uses-material-design: true
