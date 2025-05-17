@@ -81,15 +81,15 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
 
               SizedBox(
-                height: 500, // de 180 → 240
+                height: MediaQuery.of(context).size.height * 0.3, // de 180 → 240
                 width: double.infinity,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.asset(
-                    'assets/irrigo_app',
+                    'assets/irrigo_app.png',
                     fit: BoxFit.cover,
                   ),
                 ),

@@ -77,7 +77,17 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
               ),
               const SizedBox(height: 40),
-              Image.asset('assets/irrigo_app', height: 450, fit: BoxFit.cover),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.3,
+                width: double.infinity,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'assets/irrigo_app.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
               const SizedBox(height: 32),
               Form(
                 key: _formKey,
