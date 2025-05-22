@@ -1,14 +1,15 @@
 import 'package:flutter/foundation.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'screens/login_page.dart';
 import 'screens/signup_page.dart';
 import 'screens/main_page.dart';
 import 'screens/backoffice_page.dart';
 import 'screens/server_down_page.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 
 void main() async {
@@ -18,11 +19,12 @@ void main() async {
   );
   if (kDebugMode) {
     try {
-      //FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
-      await FirebaseAuth.instance.useAuthEmulator('192.168.1.246', 9099);
+      print("debug");
+      FirebaseAuth.instance.useAuthEmulator('172.20.10.5', 9099);
+      FirebaseDatabase.instance.useDatabaseEmulator('172.20.10.5', 9001);
+
 
     } catch (e) {
-      // ignore: avoid_print
       print(e);
     }
   }
