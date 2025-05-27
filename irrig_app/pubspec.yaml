@@ -11,10 +11,12 @@ dependencies:
     sdk: flutter
   flutter_svg: ^2.0.7
   provider: ^6.0.5
+  flutter_blue_plus:
+  permission_handler:
 
   # Firebase
-  firebase_core: ^3.13.0
-  firebase_auth: ^5.5.3
+  firebase_core:
+  firebase_auth:
   firebase_database:
 
 dev_dependencies:
