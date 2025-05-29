@@ -7,9 +7,16 @@ import 'screens/main_page.dart';
 import 'screens/backoffice_page.dart';
 import 'screens/server_down_page.dart';
 import 'firebase_options.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_database/firebase_database.dart';
+
+import 'package:provider/provider.dart';
+
+
+import 'firebase/auth.dart';
+import 'services/data_service.dart';
+
+
 
 
 void main() async {
@@ -20,15 +27,23 @@ void main() async {
   if (kDebugMode) {
     try {
       print("debug");
-      FirebaseAuth.instance.useAuthEmulator('172.20.10.5', 9099);
-      FirebaseDatabase.instance.useDatabaseEmulator('172.20.10.5', 9001);
+      //FirebaseAuth.instance.useAuthEmulator('172.20.10.5', 9099);
+      //FirebaseDatabase.instance.useDatabaseEmulator('172.20.10.5', 9001);
 
 
     } catch (e) {
       print(e);
     }
   }
-  runApp(const IrrigApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider<AuthService>(create: (_) => AuthService()),
+        Provider<DataService>(create: (_) => DataService()),
+      ],
+      child: const IrrigApp(),
+    ),
+  );
 }
 
 

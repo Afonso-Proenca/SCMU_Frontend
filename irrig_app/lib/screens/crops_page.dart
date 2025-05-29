@@ -1,67 +1,69 @@
 import 'package:flutter/material.dart';
-import '../firebase/sensorData.dart';
+import 'package:provider/provider.dart';
+import '../services/data_service.dart';
 
 class CropsPage extends StatelessWidget {
   const CropsPage({Key? key}) : super(key: key);
 
-  final String sensorPath = 'sensors'; //location in db
-
   @override
   Widget build(BuildContext context) {
-    final sensorService = SensorDataService();
+    final ds = context.read<DataService>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Crops'),
-      ),
-      body: StreamBuilder<Map<String, dynamic>?>(
-        stream: sensorService.streamSensorData(sensorPath),
-        builder: (context, snapshot) {
-          print('ConnectionState: ${snapshot.connectionState}');
-          print('HasData: ${snapshot.hasData}');
-          print('HasError: ${snapshot.hasError}');
-          print('Error: ${snapshot.error}');
-          if (snapshot.hasError) return Text('Error: ${snapshot.error}');
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            print("here");
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(child: Text('No sensor data available'));
-          }
-
-          final data = snapshot.data!;
-          print(data);
-          final humidity = data['humidity']?.toString() ?? 'N/A';
-          final temperature = data['temp']?.toString() ?? 'N/A';
-          final timestamp = data['timestamp'];
-
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Sensor Data',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+      appBar: AppBar(title: const Text('Crops')),
+      body: StreamBuilder<Iterable<Crop>>(
+        stream: ds.cropsStream(),
+        builder: (_, snap) {
+          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+          final crops = snap.data!.toList();
+          if (crops.isEmpty) return const Center(child: Text('No crops yet'));
+          return ListView.builder(
+            itemCount: crops.length,
+            itemBuilder: (_, i) {
+              final c = crops[i];
+              return ListTile(
+                title: Text(c.name),
+                subtitle: Text(c.type),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () => ds.deleteCrop(c.id),
                 ),
-                const SizedBox(height: 20),
-                Text('Temperature: $temperature °C', style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 10),
-                Text('Humidity: $humidity %', style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 10),
-                if (timestamp != null)
-                  Text('Last updated: ${DateTime.fromMillisecondsSinceEpoch(timestamp * 1000)}', style: const TextStyle(fontSize: 14, color: Colors.grey)),
-              ],
-            ),
+              );
+            },
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.add),
+        onPressed: () => _showAddDialog(context, ds),
+      ),
+    );
+  }
+
+  void _showAddDialog(BuildContext ctx, DataService ds) {
+    final nameCtrl = TextEditingController();
+    final typeCtrl = TextEditingController();
+    showDialog(
+      context: ctx,
+      builder: (_) => AlertDialog(
+        title: const Text('Add Crop'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+            TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Type')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: Navigator.of(ctx).pop, child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              ds.addCrop(nameCtrl.text, typeCtrl.text);
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
       ),
     );
   }
