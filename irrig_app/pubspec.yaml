@@ -13,6 +13,8 @@ dependencies:
   provider: ^6.0.5
   flutter_blue_plus:
   permission_handler:
+  fl_chart:
+  intl:
 
   # Firebase
   firebase_core:
