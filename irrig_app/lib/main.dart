@@ -24,7 +24,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  if (kDebugMode) {
+ /* if (kDebugMode) {
     try {
       print("debug");
       //FirebaseAuth.instance.useAuthEmulator('172.20.10.5', 9099);
@@ -34,7 +34,7 @@ void main() async {
     } catch (e) {
       print(e);
     }
-  }
+  }*/
   runApp(
     MultiProvider(
       providers: [
