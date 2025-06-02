@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../services/data_service.dart';
+import '../services/user_service.dart';
 import 'crops_page.dart';
 import 'irrigation_settings_page.dart';
 import 'water_tank_info_page.dart';
+import 'admin_page.dart';
 
 class MainPage extends StatelessWidget {
   const MainPage({Key? key}) : super(key: key);
@@ -17,11 +19,7 @@ class MainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Apenas para forçar o Provider a instanciar o serviço,
-    // embora não o usemos diretamente aqui.
-    context.read<DataService>();
-    // Também podemos aceder ao AuthService se precisarmos.
-    // context.read<AuthService>();
+    final userSvc = context.read<UserService>();
 
     return Scaffold(
       appBar: AppBar(
@@ -36,36 +34,60 @@ class MainPage extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: GridView.count(
-          crossAxisCount: 2,
-          mainAxisSpacing: 24,
-          crossAxisSpacing: 24,
-          children: [
-            _MenuTile(
-              icon: Icons.grass,
-              label: 'Crops',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CropsPage()),
+        child: StreamBuilder<bool>(
+          stream: userSvc.isAdminStream,
+          builder: (context, snapshot) {
+            final isAdmin = snapshot.data ?? false;
+
+            // Build list of tiles common to all users
+            final tiles = <_MenuTile>[
+              _MenuTile(
+                icon: Icons.grass,
+                label: 'Crops',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CropsPage()),
+                ),
               ),
-            ),
-            _MenuTile(
-              icon: Icons.settings,
-              label: 'Irrigation Settings',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const IrrigationSettingsPage()),
+              _MenuTile(
+                icon: Icons.settings,
+                label: 'Irrigation Settings',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const IrrigationSettingsPage()),
+                ),
               ),
-            ),
-            _MenuTile(
-              icon: Icons.water_drop,
-              label: 'Water tank info',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const WaterTankInfoPage()),
+              _MenuTile(
+                icon: Icons.water_drop,
+                label: 'Water tank info',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WaterTankInfoPage()),
+                ),
               ),
-            ),
-          ],
+            ];
+
+            // If the user is an admin, add the Admin Panel tile
+            if (isAdmin) {
+              tiles.add(
+                _MenuTile(
+                  icon: Icons.admin_panel_settings,
+                  label: 'Admin Panel',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminPage()),
+                  ),
+                ),
+              );
+            }
+
+            return GridView.count(
+              crossAxisCount: 2,
+              mainAxisSpacing: 24,
+              crossAxisSpacing: 24,
+              children: tiles,
+            );
+          },
         ),
       ),
     );
@@ -102,7 +124,10 @@ class _MenuTile extends StatelessWidget {
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),

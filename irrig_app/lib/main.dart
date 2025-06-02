@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:irrig_app/services/user_service.dart';
 import 'screens/login_page.dart';
 import 'screens/signup_page.dart';
 import 'screens/main_page.dart';
@@ -40,6 +41,7 @@ void main() async {
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
         Provider<DataService>(create: (_) => DataService()),
+        Provider<UserService>(create: (_) => UserService()),
       ],
       child: const IrrigApp(),
     ),
