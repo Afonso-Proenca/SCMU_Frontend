@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:irrig_app/services/user_service.dart';
 import 'package:provider/provider.dart';
+
 import '../services/data_service.dart';
+import '../screens/crop_detail_page.dart'; // ← Importa a página de detalhe
 
 class CropsPage extends StatelessWidget {
   const CropsPage({Key? key}) : super(key: key);
@@ -8,15 +11,20 @@ class CropsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = context.read<DataService>();
+    final userSvc = context.read<UserService>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Crops')),
       body: StreamBuilder<Iterable<Crop>>(
         stream: ds.cropsStream(),
         builder: (_, snap) {
-          if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
           final crops = snap.data!.toList();
-          if (crops.isEmpty) return const Center(child: Text('No crops yet'));
+          if (crops.isEmpty) {
+            return const Center(child: Text('No crops yet'));
+          }
           return ListView.builder(
             itemCount: crops.length,
             itemBuilder: (_, i) {
@@ -24,18 +32,45 @@ class CropsPage extends StatelessWidget {
               return ListTile(
                 title: Text(c.name),
                 subtitle: Text(c.type),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () => ds.deleteCrop(c.id),
+                // Navegação ao tocar na própria linha
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CropDetailGate(crop: c),
+                    ),
+                  );
+                },
+                // Botão de delete à direita (apenas admins conseguem ver)
+                trailing: StreamBuilder<bool>(
+                  stream: userSvc.isAdminStream,
+                  builder: (_, s) {
+                    final isAdmin = s.data ?? false;
+                    return isAdmin
+                        ? IconButton(
+                            icon: const Icon(Icons.delete),
+                            onPressed: () => ds.deleteCrop(c.id),
+                          )
+                        : const SizedBox.shrink();
+                  },
                 ),
               );
             },
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
-        onPressed: () => _showAddDialog(context, ds),
+      // FAB só visível para admins
+      floatingActionButton: StreamBuilder<bool>(
+        stream: userSvc.isAdminStream,
+        builder: (_, s) {
+          final isAdmin = s.data ?? false;
+          return isAdmin
+              ? FloatingActionButton(
+                  onPressed: () => _showAddDialog(context, ds),
+                  child: const Icon(Icons.add),
+                )
+              : const SizedBox.shrink();
+        },
       ),
     );
   }
@@ -50,12 +85,21 @@ class CropsPage extends StatelessWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
-            TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Type')),
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            TextField(
+              controller: typeCtrl,
+              decoration: const InputDecoration(labelText: 'Type'),
+            ),
           ],
         ),
         actions: [
-          TextButton(onPressed: Navigator.of(ctx).pop, child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               ds.addCrop(nameCtrl.text, typeCtrl.text);
