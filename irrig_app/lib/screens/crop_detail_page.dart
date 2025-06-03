@@ -103,7 +103,7 @@ class CropDetailPage extends StatelessWidget {
               ),
             ),
 
-            // Podes adicionar botões de “Editar”, “Ver métricas em tempo real”, etc.
+            /*// Podes adicionar botões de “Editar”, “Ver métricas em tempo real”, etc.
             // Caso o utilizador seja admin ou tenha permissão, permite edição:
             StreamBuilder<bool>(
               stream: userSvc.isAdminStream,
@@ -121,7 +121,7 @@ class CropDetailPage extends StatelessWidget {
                   return const SizedBox.shrink();
                 }
               },
-            ),
+            ),*/
           ],
         ),
       ),
