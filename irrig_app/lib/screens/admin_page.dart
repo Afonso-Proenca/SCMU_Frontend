@@ -4,8 +4,21 @@ import 'package:provider/provider.dart';
 import '../services/data_service.dart';
 import '../services/user_service.dart';
 
-class AdminPage extends StatelessWidget {
+class AdminPage extends StatefulWidget {
   const AdminPage({Key? key}) : super(key: key);
+
+  @override
+  State<AdminPage> createState() => _AdminPageState();
+}
+
+class _AdminPageState extends State<AdminPage> {
+  late Future<List<Map<String, dynamic>>> _usersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _usersFuture = context.read<UserService>().fetchFilteredUsers();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +40,33 @@ class AdminPage extends StatelessWidget {
             leading: const Icon(Icons.person_remove),
             title: const Text('Remove crop from user'),
             onTap: () => _deleteUserFromCropDialog(context, db),
+          ),
+          const Divider(),
+          const Text('Users',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _usersFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasError) {
+                return Text('Error: ${snapshot.error}');
+              } else if (snapshot.data == null || snapshot.data!.isEmpty) {
+                return const Text('No users found.');
+              }
+
+              final users = snapshot.data!;
+              return Column(
+                children: users.map((user) {
+                  return ListTile(
+                    title: Text(user['displayName'] ?? 'No name'),
+                    subtitle: Text(user['email'] ?? 'No email'),
+                    trailing: Text(user['uid'] ?? ''),
+                  );
+                }).toList(),
+              );
+            },
           ),
         ],
       ),
@@ -72,7 +112,8 @@ class AdminPage extends StatelessWidget {
               // Validação de campos vazios
               if (uid.isEmpty || cropId.isEmpty) {
                 ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(content: Text('Por favor preencha ambos os campos.')),
+                  const SnackBar(
+                      content: Text('Por favor preencha ambos os campos.')),
                 );
                 return;
               }
@@ -83,7 +124,9 @@ class AdminPage extends StatelessWidget {
               if (!snap.exists) {
                 // Se não existir lista de crops para este user, não há nada a remover
                 ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(content: Text('Utilizador "$uid" não tem crops atribuídas.')),
+                  SnackBar(
+                      content:
+                          Text('Utilizador "$uid" não tem crops atribuídas.')),
                 );
                 return;
               }
@@ -94,7 +137,9 @@ class AdminPage extends StatelessWidget {
               if (!currentList.contains(cropId)) {
                 // Se o crop não estiver na lista, não faz sentido remover
                 ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(content: Text('Crop "$cropId" não está atribuído ao utilizador "$uid".')),
+                  SnackBar(
+                      content: Text(
+                          'Crop "$cropId" não está atribuído ao utilizador "$uid".')),
                 );
                 return;
               }
@@ -108,7 +153,9 @@ class AdminPage extends StatelessWidget {
 
               // Mensagem de sucesso
               ScaffoldMessenger.of(ctx).showSnackBar(
-                SnackBar(content: Text('Crop "$cropId" removido do utilizador "$uid" com sucesso.')),
+                SnackBar(
+                    content: Text(
+                        'Crop "$cropId" removido do utilizador "$uid" com sucesso.')),
               );
             },
             child: const Text('Remove'),
@@ -156,7 +203,8 @@ class AdminPage extends StatelessWidget {
               // Validação de campos vazios
               if (uid.isEmpty || cropId.isEmpty) {
                 ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(content: Text('Por favor preencha ambos os campos.')),
+                  const SnackBar(
+                      content: Text('Por favor preencha ambos os campos.')),
                 );
                 return;
               }
@@ -172,7 +220,9 @@ class AdminPage extends StatelessWidget {
               if (currentList.contains(cropId)) {
                 // Se já contém, mostra mensagem e não adiciona novamente
                 ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(content: Text('Crop "$cropId" já está atribuído ao utilizador "$uid".')),
+                  SnackBar(
+                      content: Text(
+                          'Crop "$cropId" já está atribuído ao utilizador "$uid".')),
                 );
                 return;
               }
@@ -186,7 +236,9 @@ class AdminPage extends StatelessWidget {
 
               // Mensagem de sucesso
               ScaffoldMessenger.of(ctx).showSnackBar(
-                SnackBar(content: Text('Crop "$cropId" atribuído ao utilizador "$uid" com sucesso.')),
+                SnackBar(
+                    content: Text(
+                        'Crop "$cropId" atribuído ao utilizador "$uid" com sucesso.')),
               );
             },
             child: const Text('Save'),

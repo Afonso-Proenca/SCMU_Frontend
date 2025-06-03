@@ -20,6 +20,7 @@ dependencies:
   firebase_core:
   firebase_auth:
   firebase_database:
+  cloud_functions:
 
 dev_dependencies:
   flutter_test:

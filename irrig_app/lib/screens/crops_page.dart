@@ -77,38 +77,124 @@ class CropsPage extends StatelessWidget {
 
   void _showAddDialog(BuildContext ctx, DataService ds) {
     final nameCtrl = TextEditingController();
-    final typeCtrl = TextEditingController();
+    final typeOptions = [
+      'custom',
+      'carrot',
+      'corn',
+      'cucumber',
+      'lettuce',
+      'potato',
+      'rice',
+      'soybean',
+      'strawberry',
+      'tomato',
+      'wheat'
+    ];
+    String selectedType = 'custom';
+
+    final humidityMinCtrl = TextEditingController();
+    final humidityMaxCtrl = TextEditingController();
+    final lightMinCtrl = TextEditingController();
+    final lightMaxCtrl = TextEditingController();
+    final tempMinCtrl = TextEditingController();
+    final tempMaxCtrl = TextEditingController();
+
     showDialog(
       context: ctx,
-      builder: (_) => AlertDialog(
-        title: const Text('Add Crop'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'Name'),
-            ),
-            TextField(
-              controller: typeCtrl,
-              decoration: const InputDecoration(labelText: 'Type'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              ds.addCrop(nameCtrl.text, typeCtrl.text);
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Add Crop'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Name'),
+                  ),
+                  DropdownButtonFormField<String>(
+                    value: selectedType,
+                    items: typeOptions
+                        .map((type) =>
+                            DropdownMenuItem(value: type, child: Text(type)))
+                        .toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        selectedType = val!;
+                      });
+                    },
+                    decoration: const InputDecoration(labelText: 'Type'),
+                  ),
+                  if (selectedType == 'custom') ...[
+                    const Divider(),
+                    TextField(
+                      controller: humidityMinCtrl,
+                      decoration:
+                          const InputDecoration(labelText: 'Humidity Min'),
+                    ),
+                    TextField(
+                      controller: humidityMaxCtrl,
+                      decoration:
+                          const InputDecoration(labelText: 'Humidity Max'),
+                    ),
+                    TextField(
+                      controller: lightMinCtrl,
+                      decoration: const InputDecoration(labelText: 'Light Min'),
+                    ),
+                    TextField(
+                      controller: lightMaxCtrl,
+                      decoration: const InputDecoration(labelText: 'Light Max'),
+                    ),
+                    TextField(
+                      controller: tempMinCtrl,
+                      decoration: const InputDecoration(labelText: 'Temp Min'),
+                    ),
+                    TextField(
+                      controller: tempMaxCtrl,
+                      decoration: const InputDecoration(labelText: 'Temp Max'),
+                    ),
+                  ]
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final settings = selectedType == 'custom'
+                        ? {
+                            'humidity': {
+                              'min': double.tryParse(humidityMinCtrl.text) ?? 0,
+                              'max': double.tryParse(humidityMaxCtrl.text) ?? 0,
+                            },
+                            'light': {
+                              'min': double.tryParse(lightMinCtrl.text) ?? 0,
+                              'max': double.tryParse(lightMaxCtrl.text) ?? 0,
+                            },
+                            'temperature': {
+                              'min': double.tryParse(tempMinCtrl.text) ?? 0,
+                              'max': double.tryParse(tempMaxCtrl.text) ?? 0,
+                            },
+                          }
+                        : <String, Map<String, double>>{};
+
+                    ds.addCrop(
+                      nameCtrl.text,
+                      selectedType,
+                      settings,
+                    );
+                    Navigator.of(ctx).pop();
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
