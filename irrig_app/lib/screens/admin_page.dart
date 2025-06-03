@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -27,66 +28,93 @@ class _AdminPageState extends State<AdminPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Admin Panel')),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          ListTile(
-            leading: const Icon(Icons.person_add),
-            title: const Text('Assign crop to user'),
-            onTap: () => _assignCropDialog(context, db),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.person_remove),
-            title: const Text('Remove crop from user'),
-            onTap: () => _deleteUserFromCropDialog(context, db),
-          ),
-          const Divider(),
-          const Text('Users',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _usersFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _usersFuture,
+        builder: (context, userSnapshot) {
+          if (userSnapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (userSnapshot.hasError) {
+            return Text('Error loading users: ${userSnapshot.error}');
+          }
+
+          final users = userSnapshot.data ?? [];
+
+          return StreamBuilder<Iterable<Crop>>(
+            stream: ds.cropsStream(),
+            builder: (context, cropSnapshot) {
+              if (cropSnapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
-              } else if (snapshot.hasError) {
-                return Text('Error: ${snapshot.error}');
-              } else if (snapshot.data == null || snapshot.data!.isEmpty) {
-                return const Text('No users found.');
+              } else if (cropSnapshot.hasError) {
+                return Text('Error loading crops: ${cropSnapshot.error}');
               }
 
-              final users = snapshot.data!;
-              return Column(
-                children: users.map((user) {
-                  return ListTile(
-                    title: Text(user['displayName'] ?? 'No name'),
-                    subtitle: Text(user['email'] ?? 'No email'),
-                    trailing: Text(user['uid'] ?? ''),
-                  );
-                }).toList(),
+              final crops = cropSnapshot.data?.toList() ?? [];
+
+              return ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.person_add),
+                    title: const Text('Assign crop to user'),
+                    onTap: () => _assignCropDialog(context, db, users, crops),
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.person_remove),
+                    title: const Text('Remove crop from user'),
+                    onTap: () =>
+                        _deleteUserFromCropDialog(context, db, users, crops),
+                  ),
+                  const Divider(),
+                  const Text('Users',
+                      style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  ...users.map((user) {
+                    return ListTile(
+                      //title: Text(user['displayName'] ?? 'No name'),
+                      subtitle: Text(user['email'] ?? 'No email'),
+                      trailing: Text(user['uid'] ?? ''),
+                    );
+                  }).toList(),
+                ],
               );
             },
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
   /// Diálogo que remove UMA crop da lista de crops de um user,
   /// em vez de apagar todo o nó do user.
-  void _deleteUserFromCropDialog(BuildContext ctx, DatabaseReference db) {
-    final uidCtrl = TextEditingController();
-    final cropCtrl = TextEditingController();
-
+  void _deleteUserFromCropDialog(BuildContext ctx, DatabaseReference db,
+      List<Map<String, dynamic>> users, List<Crop> crops) {
+    /*final uidCtrl = TextEditingController();
+    final cropCtrl = TextEditingController();*/
+    String? selectedUid;
+    String? selectedCropId;
     showDialog(
       context: ctx,
-      builder: (_) => AlertDialog(
-        title: const Text('Remove crop from user'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final validUids = users.map((u) => u['uid']).whereType<String>().toList();
+            final validCropIds = crops.map((c) => c.id).whereType<String>().toList();
+
+            if (selectedUid != null && !validUids.contains(selectedUid)) {
+              selectedUid = null;
+            }
+            if (selectedCropId != null && !validCropIds.contains(selectedCropId)) {
+              selectedCropId = null;
+            }
+            return AlertDialog(
+              title: const Text('Remove crop from user'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    /*TextField(
               controller: uidCtrl,
               decoration: const InputDecoration(labelText: 'User UID'),
             ),
@@ -94,90 +122,159 @@ class _AdminPageState extends State<AdminPage> {
             TextField(
               controller: cropCtrl,
               decoration: const InputDecoration(labelText: 'Crop ID to remove'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final uid = uidCtrl.text.trim();
-              final cropId = cropCtrl.text.trim();
+            ),*/
+                    DropdownButtonFormField<String>(
+                      hint: const Text("Select User"),
+                      value: selectedUid,
+                      items: validUids.map<DropdownMenuItem<String>>((uid) {
+                        final userMap =
+                        users.firstWhere((u) => u['uid'] == uid);
+                        final displayText = (userMap['email'] as String? ??
+                            'Unknown');
+                        return DropdownMenuItem<String>(
+                          value: uid,
+                          child: Text(displayText),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          selectedUid = val;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      hint: const Text("Select Crop"),
+                      value: selectedCropId,
+                      items: validCropIds.map<DropdownMenuItem<String>>((cropId) {
+                        final cropName =
+                            crops.firstWhere((c) => c.id == cropId).name;
+                        return DropdownMenuItem<String>(
+                          value: cropId,
+                          child: Text(cropName),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          selectedCropId = val;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final uid = selectedUid;
+                    final cropId = selectedCropId;
 
-              // Validação de campos vazios
-              if (uid.isEmpty || cropId.isEmpty) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(
-                      content: Text('Por favor preencha ambos os campos.')),
-                );
-                return;
-              }
+                    // Validação de campos vazios
+                    if (uid!.isEmpty || cropId!.isEmpty) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                            content:
+                            Text('Por favor selecione ambos os campos.')),
+                      );
+                      return;
+                    }
 
-              final ref = db.child('users/$uid/crops');
-              final snap = await ref.get();
+                    final ref = db.child('users/$uid/crops');
+                    final snap = await ref.get();
 
-              if (!snap.exists) {
-                // Se não existir lista de crops para este user, não há nada a remover
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(
-                      content:
-                          Text('Utilizador "$uid" não tem crops atribuídas.')),
-                );
-                return;
-              }
+                    if (!snap.exists) {
+                      // Se não existir lista de crops para este user, não há nada a remover
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                                'Utilizador "$uid" não tem crops atribuídas.')),
+                      );
+                      return;
+                    }
 
-              // Lista atual de crops
-              final currentList = List<String>.from(snap.value as List);
+                    // Lista atual de crops
+                    final currentList = List<String>.from(snap.value as List);
 
-              if (!currentList.contains(cropId)) {
-                // Se o crop não estiver na lista, não faz sentido remover
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(
-                      content: Text(
-                          'Crop "$cropId" não está atribuído ao utilizador "$uid".')),
-                );
-                return;
-              }
+                    if (!currentList.contains(cropId)) {
+                      // Se o crop não estiver na lista, não faz sentido remover
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                                'Crop "$cropId" não está atribuído ao utilizador "$uid".')),
+                      );
+                      return;
+                    }
 
-              // Remove a cropId e atualiza no Firebase
-              currentList.remove(cropId);
-              await ref.set(currentList);
+                    // Remove a cropId e atualiza no Firebase
+                    currentList.remove(cropId);
+                    await ref.set(currentList);
 
-              // Fecha o diálogo
-              Navigator.of(ctx).pop();
+                    // Fecha o diálogo
+                    Navigator.of(ctx).pop();
 
-              // Mensagem de sucesso
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                SnackBar(
-                    content: Text(
-                        'Crop "$cropId" removido do utilizador "$uid" com sucesso.')),
-              );
-            },
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
+                    // Mensagem de sucesso
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(
+                          content: Text(
+                              'Crop "$cropId" removido do utilizador "$uid" com sucesso.')),
+                    );
+                  },
+                  child: const Text('Remove'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
   /// Diálogo que adiciona UMA crop à lista de crops de um user
-  void _assignCropDialog(BuildContext ctx, DatabaseReference db) {
-    final uidCtrl = TextEditingController();
-    final cropCtrl = TextEditingController();
+  void _assignCropDialog(BuildContext ctx, DatabaseReference db,
+      List<Map<String, dynamic>> users, List<Crop> crops) {
+    /*final uidCtrl = TextEditingController();
+    final cropCtrl = TextEditingController();*/
+    String? selectedUid;
+    String? selectedCropId;
 
     showDialog(
       context: ctx,
-      builder: (_) => AlertDialog(
-        title: const Text('Assign crop to user'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final validUids = users
+                .map((u) => u['uid'])
+                .whereType<String>()
+                .toList();
+            final validCropIds = crops
+                .map((c) => c.id)
+                .whereType<String>()
+                .toList();
+            print(">>> validUids: $validUids");
+            print(">>> validCropIds: $validCropIds");
+            print('Full users list: $users');
+            print('Full crops list: $crops');
+
+
+            if (selectedUid != null && !validUids.contains(selectedUid)) {
+              selectedUid = null;
+            }
+            if (selectedCropId != null && !validCropIds.contains(selectedCropId)) {
+              selectedCropId = null;
+            }
+            return AlertDialog(
+              title: const Text('Assign crop to user'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    /*TextField(
               controller: uidCtrl,
               decoration: const InputDecoration(labelText: 'User UID'),
             ),
@@ -185,66 +282,109 @@ class _AdminPageState extends State<AdminPage> {
             TextField(
               controller: cropCtrl,
               decoration: const InputDecoration(labelText: 'Crop ID to assign'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final uid = uidCtrl.text.trim();
-              final cropId = cropCtrl.text.trim();
+            ),*/
+                    DropdownButtonFormField<String>(
+                      hint: const Text("Select User"),
+                      value: selectedUid,
+                      isExpanded: true,
+                      items: validUids.map<DropdownMenuItem<String>>((uid) {
+                        final userMap =
+                        users.firstWhere((u) => u['uid'] == uid);
+                        final displayText = (userMap['email'] as String? ??
+                                'Unknown');
+                        return DropdownMenuItem<String>(
+                          value: uid,
+                          child: Text(displayText),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          selectedUid = val;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      hint: const Text("Select Crop"),
+                      value: selectedCropId,
+                      items: validCropIds.map<DropdownMenuItem<String>>((cropId) {
+                        final cropName =
+                            crops.firstWhere((c) => c.id == cropId).name;
+                        return DropdownMenuItem<String>(
+                          value: cropId,
+                          child: Text(cropName),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          selectedCropId = val;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final uid = selectedUid;
+                    final cropId = selectedCropId;
 
-              // Validação de campos vazios
-              if (uid.isEmpty || cropId.isEmpty) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(
-                      content: Text('Por favor preencha ambos os campos.')),
-                );
-                return;
-              }
+                    // Validação de campos vazios
+                    if (uid!.isEmpty || cropId!.isEmpty) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                            content:
+                            Text('Por favor selecione ambos os campos.')),
+                      );
+                      return;
+                    }
 
-              final ref = db.child('users/$uid/crops');
-              final snap = await ref.get();
+                    final ref = db.child('users/$uid/crops');
+                    final snap = await ref.get();
 
-              // Lista atual de crops (ou lista vazia se não existir ainda)
-              final currentList = snap.exists
-                  ? List<String>.from(snap.value as List)
-                  : <String>[];
+                    // Lista atual de crops (ou lista vazia se não existir ainda)
+                    final currentList = snap.exists
+                        ? List<String>.from(snap.value as List)
+                        : <String>[];
 
-              if (currentList.contains(cropId)) {
-                // Se já contém, mostra mensagem e não adiciona novamente
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(
-                      content: Text(
-                          'Crop "$cropId" já está atribuído ao utilizador "$uid".')),
-                );
-                return;
-              }
+                    if (currentList.contains(cropId)) {
+                      // Se já contém, mostra mensagem e não adiciona novamente
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                                'Crop "$cropId" já está atribuído ao utilizador "$uid".')),
+                      );
+                      return;
+                    }
 
-              // Adiciona à lista e grava no Firebase
-              currentList.add(cropId);
-              await ref.set(currentList);
+                    // Adiciona à lista e grava no Firebase
+                    currentList.add(cropId);
+                    await ref.set(currentList);
 
-              // Fecha o diálogo
-              Navigator.of(ctx).pop();
+                    // Fecha o diálogo
+                    Navigator.of(ctx).pop();
 
-              // Mensagem de sucesso
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                SnackBar(
-                    content: Text(
-                        'Crop "$cropId" atribuído ao utilizador "$uid" com sucesso.')),
-              );
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+                    // Mensagem de sucesso
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(
+                          content: Text(
+                              'Crop "$cropId" atribuído ao utilizador "$uid" com sucesso.')),
+                    );
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
