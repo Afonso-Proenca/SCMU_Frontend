@@ -14,11 +14,36 @@ class DataService {
   Stream<Iterable<Crop>> cropsStream() => _db.child('crops').onValue.map(
         (event) => (event.snapshot.value as Map<dynamic, dynamic>? ?? {})
             .entries
-            .map((e) => Crop.fromMap(e.key as String, Map<String, dynamic>.from(e.value))),
+            .map((e) => Crop.fromMap(
+                e.key as String, Map<String, dynamic>.from(e.value))),
       );
 
-  Future<void> addCrop(String name, String type) async {
-    await _db.child('crops').push().set({'name': name, 'type': type});
+  Future<void> addCrop(
+    String name,
+    String type,
+    Map<String, Map<String, double>> settings,
+  ) async {
+    final ref = _db.child('crops').push();
+
+    if (type != 'custom') {
+      print("Type: $type");
+      final defaultSnap = await _db.child('crops_default/$type').get();
+      if (defaultSnap.exists) {
+        final data = Map<String, dynamic>.from(defaultSnap.value as Map);
+        settings = (data['settings'] as Map).map((k, v) {
+          return MapEntry(
+            k.toString(),
+            (v as Map).map((sk, sv) =>
+                MapEntry(sk.toString(), (sv as num).toDouble())),
+          );
+        });
+      }
+    }
+    ref.set({
+      'name': name,
+      'type': type,
+      'settings': settings,
+    });
   }
 
   Future<void> deleteCrop(String id) => _db.child('crops/$id').remove();
@@ -39,10 +64,8 @@ class DataService {
   }
 
   // ---------- Water Tank ----------
-  Stream<WaterTankInfo> tankStream() => _db
-      .child('water_tank')
-      .onValue
-      .map((e) => WaterTankInfo.fromMap(
+  Stream<WaterTankInfo> tankStream() =>
+      _db.child('water_tank').onValue.map((e) => WaterTankInfo.fromMap(
             Map<String, dynamic>.from(e.snapshot.value as Map),
           ));
 
@@ -69,19 +92,30 @@ class DataService {
   List<SensorData> getLastHourDataCache() => _lastHourSensorData;
 }
 
-
 /// --- modelos simples ---
 
 class Crop {
   final String id, name, type;
-  Crop(this.id, this.name, this.type);
+  final Map<String, Map<String, double>> settings;
 
-  factory Crop.fromMap(String id, Map<String, dynamic> m) =>
-      Crop(id, m['name'] as String, m['type'] as String);
+  Crop(this.id, this.name, this.type, this.settings);
+
+  factory Crop.fromMap(String id, Map<String, dynamic> m) {
+    return Crop(
+      id,
+      m['name'] as String,
+      m['type'] as String,
+      Map<String, Map<String, double>>.from(
+        (m['settings'] as Map? ?? {}).map((k, v) =>
+            MapEntry(k.toString(), Map<String, double>.from(v as Map))),
+      ),
+    );
+  }
 }
 
 class IrrigationSettings {
   final double moistMin, moistMax;
+
   IrrigationSettings({required this.moistMin, required this.moistMax});
 
   factory IrrigationSettings.fromMap(Map<String, dynamic> m) =>
@@ -96,6 +130,7 @@ class IrrigationSettings {
 class WaterTankInfo {
   final double level; // percentual
   final bool pumpOn;
+
   WaterTankInfo({required this.level, required this.pumpOn});
 
   factory WaterTankInfo.fromMap(Map<String, dynamic> m) => WaterTankInfo(
