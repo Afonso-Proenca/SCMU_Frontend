@@ -132,7 +132,7 @@ def make_meteo_request(request):
 
 def list_filtered_users(request):
     filtered_users = []
-    excluded_domain = "@irrgo.com"
+    excluded_domain = "@irrigo.com"
     page_token = None
 
     auth_header = request.headers.get('Authorization')
@@ -165,6 +165,7 @@ def list_filtered_users(request):
                     continue
 
                 filtered_users.append({
+                    "uid": user.uid,
                     "email": email,
                     "displayName": display_name,
                 })

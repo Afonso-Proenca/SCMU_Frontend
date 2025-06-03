@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:irrig_app/services/user_service.dart';
 import 'package:provider/provider.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/data_service.dart';
 import '../screens/crop_detail_page.dart'; // ← Importa a página de detalhe
 
 class CropsPage extends StatelessWidget {
   const CropsPage({Key? key}) : super(key: key);
+
 
   @override
   Widget build(BuildContext context) {
