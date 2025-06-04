@@ -1,2 +1,7 @@
 firebase-admin
 flask
+openmeteo-requests
+requests
+requests-cache
+retry-requests
+pandas
