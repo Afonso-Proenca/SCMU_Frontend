@@ -5,7 +5,7 @@
 import functions_framework
 from flask import jsonify, Request
 import firebase_admin
-from firebase_admin import auth, credentials
+from firebase_admin import auth, credentials, db
 import requests
 from flask import make_response
 import openmeteo_requests
@@ -15,7 +15,9 @@ from retry_requests import retry
 import time
 
 cred = credentials.Certificate("scmu-6f1b8-firebase-adminsdk-fbsvc-bc6b3767d5.json")
-firebase_admin.initialize_app(cred)
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://scmu-6f1b8-default-rtdb.europe-west1.firebasedatabase.app/'
+})
 
 
 def generate_token(request: Request):
@@ -98,7 +100,7 @@ def make_meteo_request(request):
     params = {
         "latitude": lat,
         "longitude": lon,
-        "hourly": ["precipitation", "precipitation_probability"],
+        "daily": "precipitation_probability_max",
         "forecast_days": 1
     }
 
@@ -106,25 +108,22 @@ def make_meteo_request(request):
         responses = openmeteo.weather_api(url, params=params)
         response = responses[0]
 
-        hourly = response.Hourly()
-        hourly_precipitation = hourly.Variables(0).ValuesAsNumpy()
-        hourly_precipitation_probability = hourly.Variables(1).ValuesAsNumpy()
+        daily = response.Daily()
+        daily_precipitation_probability_max = daily.Variables(0).ValuesAsNumpy()
 
-        hourly_data = {
-            "date": pd.date_range(
-                start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
-                end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
-                freq=pd.Timedelta(seconds=hourly.Interval()),
-                inclusive="left"
-            ),
-            "precipitation": hourly_precipitation,
-            "precipitation_probability": hourly_precipitation_probability
-        }
+        daily_data = {"date": pd.date_range(
+            start = pd.to_datetime(daily.Time(), unit = "s", utc = True),
+            end = pd.to_datetime(daily.TimeEnd(), unit = "s", utc = True),
+            freq = pd.Timedelta(seconds = daily.Interval()),
+            inclusive = "left"
+        )}
 
-        hourly_dataframe = pd.DataFrame(data=hourly_data)
-        print(hourly_dataframe)
+        daily_data["precipitation_probability_max"] = daily_precipitation_probability_max
 
-        return make_response(hourly_dataframe.to_json(orient="records"), 200)
+        daily_dataframe = pd.DataFrame(data = daily_data)
+        print(daily_dataframe)
+
+        return make_response(daily_dataframe.to_json(orient="records"), 200)
 
     except Exception as e:
         return make_response(f"Weather API error: {str(e)}", 500)
@@ -164,10 +163,24 @@ def list_filtered_users(request):
                 if claims.get("cropAdmin") is True:
                     continue
 
+                crops_ref = db.reference(f'users/{user.uid}/crops')
+                crops_snapshot = crops_ref.get()
+                if crops_snapshot is None:
+                    crops_list = []
+                else:
+                    if isinstance(crops_snapshot, dict):
+                        crops_list = list(crops_snapshot.values())
+
+                    elif isinstance(crops_snapshot, list):
+                        crops_list = crops_snapshot
+                    else:
+                        crops_list = []
+
                 filtered_users.append({
                     "uid": user.uid,
                     "email": email,
                     "displayName": display_name,
+                    "crops": crops_list,
                 })
 
             if not result.next_page_token:
