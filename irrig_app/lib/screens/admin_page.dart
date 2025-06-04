@@ -68,13 +68,13 @@ class _AdminPageState extends State<AdminPage> {
                   const Divider(),
                   const Text('Users',
                       style:
-                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   ...users.map((user) {
                     return ListTile(
-                      //title: Text(user['displayName'] ?? 'No name'),
-                      subtitle: Text(user['email'] ?? 'No email'),
-                      trailing: Text(user['uid'] ?? ''),
+                      title: Text(user['email'] ?? 'No email'),
+                      subtitle: Text(user['uid'] ?? ''),
+                      trailing: Text(user['crops'] ?? ''),
                     );
                   }).toList(),
                 ],
@@ -99,13 +99,16 @@ class _AdminPageState extends State<AdminPage> {
       builder: (_) {
         return StatefulBuilder(
           builder: (context, setState) {
-            final validUids = users.map((u) => u['uid']).whereType<String>().toList();
-            final validCropIds = crops.map((c) => c.id).whereType<String>().toList();
+            final validUids =
+                users.map((u) => u['uid']).whereType<String>().toList();
+            final validCropIds =
+                crops.map((c) => c.id).whereType<String>().toList();
 
             if (selectedUid != null && !validUids.contains(selectedUid)) {
               selectedUid = null;
             }
-            if (selectedCropId != null && !validCropIds.contains(selectedCropId)) {
+            if (selectedCropId != null &&
+                !validCropIds.contains(selectedCropId)) {
               selectedCropId = null;
             }
             return AlertDialog(
@@ -128,9 +131,9 @@ class _AdminPageState extends State<AdminPage> {
                       value: selectedUid,
                       items: validUids.map<DropdownMenuItem<String>>((uid) {
                         final userMap =
-                        users.firstWhere((u) => u['uid'] == uid);
-                        final displayText = (userMap['email'] as String? ??
-                            'Unknown');
+                            users.firstWhere((u) => u['uid'] == uid);
+                        final displayText =
+                            (userMap['email'] as String? ?? 'Unknown');
                         return DropdownMenuItem<String>(
                           value: uid,
                           child: Text(displayText),
@@ -146,7 +149,8 @@ class _AdminPageState extends State<AdminPage> {
                     DropdownButtonFormField<String>(
                       hint: const Text("Select Crop"),
                       value: selectedCropId,
-                      items: validCropIds.map<DropdownMenuItem<String>>((cropId) {
+                      items:
+                          validCropIds.map<DropdownMenuItem<String>>((cropId) {
                         final cropName =
                             crops.firstWhere((c) => c.id == cropId).name;
                         return DropdownMenuItem<String>(
@@ -180,7 +184,7 @@ class _AdminPageState extends State<AdminPage> {
                       ScaffoldMessenger.of(ctx).showSnackBar(
                         const SnackBar(
                             content:
-                            Text('Por favor selecione ambos os campos.')),
+                                Text('Por favor selecione ambos os campos.')),
                       );
                       return;
                     }
@@ -198,10 +202,18 @@ class _AdminPageState extends State<AdminPage> {
                       return;
                     }
 
-                    // Lista atual de crops
-                    final currentList = List<String>.from(snap.value as List);
+                    // Lista atual de crops para map id nome de crop
+                    final list = snap.value as List<dynamic>;
+                    final currentList = list.map((e) {
+                      final m = Map<String, dynamic>.from(e as Map);
+                      return {
+                        'id': m['id'] as String,
+                        'name': m['name'] as String,
+                      };
+                    }).toList();
 
-                    if (!currentList.contains(cropId)) {
+                    final indexToRemove = currentList.indexWhere((m) => m['id'] == cropId);
+                    if (indexToRemove < 0)  {
                       // Se o crop não estiver na lista, não faz sentido remover
                       ScaffoldMessenger.of(ctx).showSnackBar(
                         SnackBar(
@@ -212,7 +224,7 @@ class _AdminPageState extends State<AdminPage> {
                     }
 
                     // Remove a cropId e atualiza no Firebase
-                    currentList.remove(cropId);
+                    currentList.removeAt(indexToRemove);
                     await ref.set(currentList);
 
                     // Fecha o diálogo
@@ -248,24 +260,20 @@ class _AdminPageState extends State<AdminPage> {
       builder: (_) {
         return StatefulBuilder(
           builder: (context, setState) {
-            final validUids = users
-                .map((u) => u['uid'])
-                .whereType<String>()
-                .toList();
-            final validCropIds = crops
-                .map((c) => c.id)
-                .whereType<String>()
-                .toList();
+            final validUids =
+                users.map((u) => u['uid']).whereType<String>().toList();
+            final validCropIds =
+                crops.map((c) => c.id).whereType<String>().toList();
             print(">>> validUids: $validUids");
             print(">>> validCropIds: $validCropIds");
             print('Full users list: $users');
             print('Full crops list: $crops');
 
-
             if (selectedUid != null && !validUids.contains(selectedUid)) {
               selectedUid = null;
             }
-            if (selectedCropId != null && !validCropIds.contains(selectedCropId)) {
+            if (selectedCropId != null &&
+                !validCropIds.contains(selectedCropId)) {
               selectedCropId = null;
             }
             return AlertDialog(
@@ -289,9 +297,9 @@ class _AdminPageState extends State<AdminPage> {
                       isExpanded: true,
                       items: validUids.map<DropdownMenuItem<String>>((uid) {
                         final userMap =
-                        users.firstWhere((u) => u['uid'] == uid);
-                        final displayText = (userMap['email'] as String? ??
-                                'Unknown');
+                            users.firstWhere((u) => u['uid'] == uid);
+                        final displayText =
+                            (userMap['email'] as String? ?? 'Unknown');
                         return DropdownMenuItem<String>(
                           value: uid,
                           child: Text(displayText),
@@ -307,7 +315,8 @@ class _AdminPageState extends State<AdminPage> {
                     DropdownButtonFormField<String>(
                       hint: const Text("Select Crop"),
                       value: selectedCropId,
-                      items: validCropIds.map<DropdownMenuItem<String>>((cropId) {
+                      items:
+                          validCropIds.map<DropdownMenuItem<String>>((cropId) {
                         final cropName =
                             crops.firstWhere((c) => c.id == cropId).name;
                         return DropdownMenuItem<String>(
@@ -341,7 +350,7 @@ class _AdminPageState extends State<AdminPage> {
                       ScaffoldMessenger.of(ctx).showSnackBar(
                         const SnackBar(
                             content:
-                            Text('Por favor selecione ambos os campos.')),
+                                Text('Por favor selecione ambos os campos.')),
                       );
                       return;
                     }
@@ -349,26 +358,40 @@ class _AdminPageState extends State<AdminPage> {
                     final ref = db.child('users/$uid/crops');
                     final snap = await ref.get();
 
-                    // Lista atual de crops (ou lista vazia se não existir ainda)
-                    final currentList = snap.exists
-                        ? List<String>.from(snap.value as List)
-                        : <String>[];
+                    // List objetos crop
+                    List<Map<String, String>> currentList;
+                    if (snap.exists) {
+                      final list = snap.value as List<dynamic>;
+                      currentList = list.map((e) {
+                        final m = Map<String, dynamic>.from(e as Map);
+                        return {
+                          'id': m['id'] as String,
+                          'name': m['name'] as String,
+                        };
+                      }).toList();
+                    } else {
+                      currentList = <Map<String, String>>[];
+                    }
 
-                    if (currentList.contains(cropId)) {
-                      // Se já contém, mostra mensagem e não adiciona novamente
+                    //vê se ja está nas lista
+                    final alreadyHas =
+                        currentList.any((m) => m['id'] == cropId);
+                    if (alreadyHas) {
                       ScaffoldMessenger.of(ctx).showSnackBar(
                         SnackBar(
-                            content: Text(
-                                'Crop "$cropId" já está atribuído ao utilizador "$uid".')),
+                          content: Text(
+                              'Crop "$cropId" já está atribuído ao utilizador "$uid".'),
+                        ),
                       );
                       return;
                     }
+                    // se n adiciona entry id and name
+                    final cropName =
+                        crops.firstWhere((c) => c.id == cropId).name;
+                    currentList.add({'id': cropId, 'name': cropName});
 
-                    // Adiciona à lista e grava no Firebase
-                    currentList.add(cropId);
                     await ref.set(currentList);
 
-                    // Fecha o diálogo
                     Navigator.of(ctx).pop();
 
                     // Mensagem de sucesso
