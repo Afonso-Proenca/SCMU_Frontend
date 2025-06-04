@@ -71,10 +71,28 @@ class _AdminPageState extends State<AdminPage> {
                           TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   ...users.map((user) {
+                    print(user);
+
+                    final email = user['email'] as String? ?? 'No email';
+                    final uid = user['uid'] as String? ?? '';
+                    String cropNames = '';
+                    if (user['crops'] is List) {
+                      final list = user['crops'] as List<dynamic>;
+
+                      final names = list
+                          .map((e) {
+                            final m = Map<String, dynamic>.from(e as Map);
+                            return m['name'] as String? ?? '';
+                          })
+                          .where((n) => n.isNotEmpty)
+                          .toList();
+                      cropNames = names.join(', ');
+                    }
+
                     return ListTile(
-                      title: Text(user['email'] ?? 'No email'),
-                      subtitle: Text(user['uid'] ?? ''),
-                      trailing: Text(user['crops'] ?? ''),
+                      title: Text(email),
+                      subtitle: Text(uid),
+                      trailing: Text(cropNames),
                     );
                   }).toList(),
                 ],
@@ -212,8 +230,9 @@ class _AdminPageState extends State<AdminPage> {
                       };
                     }).toList();
 
-                    final indexToRemove = currentList.indexWhere((m) => m['id'] == cropId);
-                    if (indexToRemove < 0)  {
+                    final indexToRemove =
+                        currentList.indexWhere((m) => m['id'] == cropId);
+                    if (indexToRemove < 0) {
                       // Se o crop não estiver na lista, não faz sentido remover
                       ScaffoldMessenger.of(ctx).showSnackBar(
                         SnackBar(
