@@ -107,23 +107,13 @@ def make_meteo_request(request):
     try:
         responses = openmeteo.weather_api(url, params=params)
         response = responses[0]
-
         daily = response.Daily()
-        daily_precipitation_probability_max = daily.Variables(0).ValuesAsNumpy()
 
-        daily_data = {"date": pd.date_range(
-            start = pd.to_datetime(daily.Time(), unit = "s", utc = True),
-            end = pd.to_datetime(daily.TimeEnd(), unit = "s", utc = True),
-            freq = pd.Timedelta(seconds = daily.Interval()),
-            inclusive = "left"
-        )}
+        precipitation = float(daily.Variables(0).ValuesAsNumpy()[0])
+        rain_expected = precipitation > 90
 
-        daily_data["precipitation_probability_max"] = daily_precipitation_probability_max
-
-        daily_dataframe = pd.DataFrame(data = daily_data)
-        print(daily_dataframe)
-
-        return make_response(daily_dataframe.to_json(orient="records"), 200)
+        db.reference("/meteo").set(rain_expected)
+        return make_response(f"Updated /meteo: {rain_expected}", 200)
 
     except Exception as e:
         return make_response(f"Weather API error: {str(e)}", 500)
