@@ -81,8 +81,7 @@ class CropDetailPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Exibe informações básicas
-            Text('ID: ${crop.id}', style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 8),
+
             Text('Type: ${crop.type}', style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 16),
 

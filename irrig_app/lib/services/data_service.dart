@@ -19,30 +19,44 @@ class DataService {
       );
 
   Future<void> addCrop(
-    String name,
-    String type,
-    Map<String, Map<String, double>> settings,
-  ) async {
+      String name,
+      String type,
+      Map<String, Map<String, double>> settings,
+      ) async {
     final ref = _db.child('crops').push();
 
+    // Começamos pelos dados introduzidos pelo utilizador
+    Map<String, Map<String, double>> finalSettings = {...settings};
+
+    // Se não for “custom”, tentamos ler defaults
     if (type != 'custom') {
-      print("Type: $type");
       final defaultSnap = await _db.child('crops_default/$type').get();
       if (defaultSnap.exists) {
-        final data = Map<String, dynamic>.from(defaultSnap.value as Map);
-        settings = (data['settings'] as Map).map((k, v) {
-          return MapEntry(
-            k.toString(),
-            (v as Map).map((sk, sv) =>
-                MapEntry(sk.toString(), (sv as num).toDouble())),
-          );
+        final defaultsRaw = Map<String, dynamic>.from(defaultSnap.value as Map);
+        final defaultSettings =
+        (defaultsRaw['settings'] as Map).map((k, v) => MapEntry(
+          k.toString(),
+          (v as Map).map(
+                  (sk, sv) => MapEntry(sk.toString(), (sv as num).toDouble())),
+        ));
+
+        // merge → defaults primeiro, depois valores que o utilizador tenha
+        // preenchido (só substitui se o utilizador não deixou em branco/0)
+        defaultSettings.forEach((sensor, ranges) {
+          final merged = Map<String, double>.from(ranges);
+          final userRanges = finalSettings[sensor] ?? {};
+          userRanges.forEach((key, val) {
+            if (val != 0) merged[key] = val;
+          });
+          finalSettings[sensor] = merged;
         });
       }
     }
-    ref.set({
+
+    await ref.set({
       'name': name,
       'type': type,
-      'settings': settings,
+      'settings': finalSettings,
     });
   }
 

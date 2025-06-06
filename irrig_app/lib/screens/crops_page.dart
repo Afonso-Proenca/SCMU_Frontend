@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:irrig_app/services/user_service.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../services/data_service.dart';
-import '../screens/crop_detail_page.dart'; // ← Importa a página de detalhe
+import '../screens/crop_detail_page.dart';
 
 class CropsPage extends StatelessWidget {
   const CropsPage({Key? key}) : super(key: key);
-
 
   @override
   Widget build(BuildContext context) {
@@ -33,25 +31,20 @@ class CropsPage extends StatelessWidget {
               return ListTile(
                 title: Text(c.name),
                 subtitle: Text(c.type),
-                // Navegação ao tocar na própria linha
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => CropDetailGate(crop: c),
-                    ),
-                  );
-                },
-                // Botão de delete à direita (apenas admins conseguem ver)
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => CropDetailGate(crop: c)),
+                ),
+                // botão “delete” visível só para admins — mantém-se igual
                 trailing: StreamBuilder<bool>(
                   stream: userSvc.isAdminStream,
                   builder: (_, s) {
                     final isAdmin = s.data ?? false;
                     return isAdmin
                         ? IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () => ds.deleteCrop(c.id),
-                          )
+                      icon: const Icon(Icons.delete),
+                      onPressed: () => ds.deleteCrop(c.id),
+                    )
                         : const SizedBox.shrink();
                   },
                 ),
@@ -60,22 +53,23 @@ class CropsPage extends StatelessWidget {
           );
         },
       ),
-      // FAB só visível para admins
+      // FAB visível apenas para administradores — mantém-se igual
       floatingActionButton: StreamBuilder<bool>(
         stream: userSvc.isAdminStream,
         builder: (_, s) {
           final isAdmin = s.data ?? false;
           return isAdmin
               ? FloatingActionButton(
-                  onPressed: () => _showAddDialog(context, ds),
-                  child: const Icon(Icons.add),
-                )
+            onPressed: () => _showAddDialog(context, ds),
+            child: const Icon(Icons.add),
+          )
               : const SizedBox.shrink();
         },
       ),
     );
   }
 
+  // ---------- diálogo de criação/edição ----------
   void _showAddDialog(BuildContext ctx, DataService ds) {
     final nameCtrl = TextEditingController();
     final typeOptions = [
@@ -93,6 +87,7 @@ class CropsPage extends StatelessWidget {
     ];
     String selectedType = 'custom';
 
+    // controladores para os limites
     final humidityMinCtrl = TextEditingController();
     final humidityMaxCtrl = TextEditingController();
     final lightMinCtrl = TextEditingController();
@@ -107,56 +102,65 @@ class CropsPage extends StatelessWidget {
           builder: (context, setState) {
             return AlertDialog(
               title: const Text('Add Crop'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Name'),
-                  ),
-                  DropdownButtonFormField<String>(
-                    value: selectedType,
-                    items: typeOptions
-                        .map((type) =>
-                            DropdownMenuItem(value: type, child: Text(type)))
-                        .toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        selectedType = val!;
-                      });
-                    },
-                    decoration: const InputDecoration(labelText: 'Type'),
-                  ),
-                  if (selectedType == 'custom') ...[
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(labelText: 'Name'),
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: selectedType,
+                      items: typeOptions
+                          .map((type) =>
+                          DropdownMenuItem(value: type, child: Text(type)))
+                          .toList(),
+                      onChanged: (val) => setState(() => selectedType = val!),
+                      decoration: const InputDecoration(labelText: 'Type'),
+                    ),
                     const Divider(),
+                    // ---- campos SEMPRE visíveis ----
                     TextField(
                       controller: humidityMinCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
                       decoration:
-                          const InputDecoration(labelText: 'Humidity Min'),
+                      const InputDecoration(labelText: 'Humidity Min'),
                     ),
                     TextField(
                       controller: humidityMaxCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
                       decoration:
-                          const InputDecoration(labelText: 'Humidity Max'),
+                      const InputDecoration(labelText: 'Humidity Max'),
                     ),
                     TextField(
                       controller: lightMinCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
                       decoration: const InputDecoration(labelText: 'Light Min'),
                     ),
                     TextField(
                       controller: lightMaxCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
                       decoration: const InputDecoration(labelText: 'Light Max'),
                     ),
                     TextField(
                       controller: tempMinCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
                       decoration: const InputDecoration(labelText: 'Temp Min'),
                     ),
                     TextField(
                       controller: tempMaxCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
                       decoration: const InputDecoration(labelText: 'Temp Max'),
                     ),
-                  ]
-                ],
+                  ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -165,22 +169,22 @@ class CropsPage extends StatelessWidget {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    final settings = selectedType == 'custom'
-                        ? {
-                            'humidity': {
-                              'min': double.tryParse(humidityMinCtrl.text) ?? 0,
-                              'max': double.tryParse(humidityMaxCtrl.text) ?? 0,
-                            },
-                            'light': {
-                              'min': double.tryParse(lightMinCtrl.text) ?? 0,
-                              'max': double.tryParse(lightMaxCtrl.text) ?? 0,
-                            },
-                            'temperature': {
-                              'min': double.tryParse(tempMinCtrl.text) ?? 0,
-                              'max': double.tryParse(tempMaxCtrl.text) ?? 0,
-                            },
-                          }
-                        : <String, Map<String, double>>{};
+                    // Construímos SEMPRE o mapa de settings;
+                    // zeros indicam que queremos usar o default do backend
+                    final settings = {
+                      'humidity': {
+                        'min': double.tryParse(humidityMinCtrl.text) ?? 0,
+                        'max': double.tryParse(humidityMaxCtrl.text) ?? 0,
+                      },
+                      'light': {
+                        'min': double.tryParse(lightMinCtrl.text) ?? 0,
+                        'max': double.tryParse(lightMaxCtrl.text) ?? 0,
+                      },
+                      'temperature': {
+                        'min': double.tryParse(tempMinCtrl.text) ?? 0,
+                        'max': double.tryParse(tempMaxCtrl.text) ?? 0,
+                      },
+                    };
 
                     ds.addCrop(
                       nameCtrl.text,
