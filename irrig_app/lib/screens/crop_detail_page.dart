@@ -28,6 +28,7 @@ class CropDetailGate extends StatelessWidget {
         }
 
         final allowedList = futureSnap.data ?? <String>[];
+        print('Allowed crop IDs for user: $allowedList');
         final bool isAssigned = allowedList.contains(crop.id);
 
         return StreamBuilder<bool>(

@@ -28,15 +28,18 @@ class UserService {
     final snap = await _db.child('users/$_uid/crops').get();
     if (!snap.exists) return [];
 
-    final list = snap.value as List<dynamic>;
-    return list
-        .map((e) {
-      if (e is String) return e;
-      if (e is Map && e.containsKey('id')) return e['id'] as String;
-      return null;
-    })
-        .whereType<String>()
-        .toList();
+    final List<String> cropIds = [];
+
+    for (final crop in snap.children) {
+      if (crop.value is Map<dynamic, dynamic>) {
+        final cropData = crop.value as Map<dynamic, dynamic>;
+        if (cropData.containsKey('id') && cropData['id'] is String) {
+          cropIds.add(cropData['id'] as String);
+        }
+      }
+    }
+    print('Crop IDs for user $_uid: $cropIds');
+    return cropIds;
   }
 
   // ---- REST/Cloud Function utilitário já existente ----

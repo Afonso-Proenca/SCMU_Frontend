@@ -6,7 +6,6 @@ class DataService {
 
   // GETTER PÚBLICO para permitir usar _db fora desta classe (ex: AdminPage)
   DatabaseReference get db => _db;
-
   // Cache dos últimos dados de sensor (última hora)
   List<SensorData> _lastHourSensorData = [];
 
@@ -60,7 +59,33 @@ class DataService {
     });
   }
 
-  Future<void> deleteCrop(String id) => _db.child('crops/$id').remove();
+  Future<void> deleteCrop(String id) async {
+    await _db.child('crops/$id').remove();
+
+    final userSnap = await _db.child('users').get();
+    if (!userSnap.exists) return;
+
+    final users = Map<String, dynamic>.from(userSnap.value as Map);
+
+    for (final entry in users.entries) {
+      final uid = entry.key;
+      final userData = Map<String, dynamic>.from(entry.value as Map);
+
+      if (userData.containsKey('crops')) {
+        final cropsList = List<dynamic>.from(userData['crops'] as List);
+
+        final newCropsList = cropsList.where((cropEntry) {
+          final cropMap = Map<String, dynamic>.from(cropEntry as Map);
+          return cropMap['id'] != id;
+        }).toList();
+
+        if (newCropsList.length != cropsList.length) {
+          await _db.child('users/$uid/crops').set(newCropsList);
+        }
+      }
+    }
+  }
+
 
   // ---------- Irrigation Settings ----------
   Future<IrrigationSettings> getSettings() async {
