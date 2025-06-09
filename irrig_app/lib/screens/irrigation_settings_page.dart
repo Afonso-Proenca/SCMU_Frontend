@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/data_service.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
 
 class IrrigationSettingsPage extends StatefulWidget {
   const IrrigationSettingsPage({Key? key}) : super(key: key);
@@ -12,165 +10,128 @@ class IrrigationSettingsPage extends StatefulWidget {
 }
 
 class _IrrigationSettingsPageState extends State<IrrigationSettingsPage> {
-  double _min = 20, _max = 60;
-  bool _loading = true;
+  Crop? _selectedCrop;
+
+  // controllers partilhados
+  final _humMin = TextEditingController();
+  final _humMax = TextEditingController();
+  final _tempMin = TextEditingController();
+  final _tempMax = TextEditingController();
+  final _lightMin = TextEditingController();
+  final _lightMax = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    final ds = context.read<DataService>();
-
-    ds.getSettings().then((s) {
-      final data = ds.getLastHourDataCache();
-      setState(() {
-        _min = s.moistMin;
-        _max = s.moistMax;
-        _loading = false;
-      });
-    });
+  void dispose() {
+    _humMin.dispose();
+    _humMax.dispose();
+    _tempMin.dispose();
+    _tempMax.dispose();
+    _lightMin.dispose();
+    _lightMax.dispose();
+    super.dispose();
   }
 
-  Widget _buildMoistureChart(List<SensorData> data) {
-    if (data.isEmpty) return const Text('No data to display');
+  @override
+  Widget build(BuildContext context) {
+    final ds = context.watch<DataService>();
 
-    final spots = data.map((d) {
-      final ms = d.timestamp.millisecondsSinceEpoch.toDouble();
-      return FlSpot(ms, d.moisture);
-    }).toList();
+    return Scaffold(
+      appBar: AppBar(title: const Text('Irrigation Settings')),
+      body: StreamBuilder<Iterable<Crop>>(
+        stream: ds.cropsStream(),
+        builder: (_, snap) {
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final crops = snap.data!.toList();
+          if (crops.isEmpty) {
+            return const Center(child: Text('No crops found'));
+          }
 
-    final minX = spots.first.x;
-    final maxX = spots.last.x;
+          // primeira selecção
+          _selectedCrop ??= crops.first;
 
-    // format timestamp to h:min
-    String formatTime(double timestamp) {
-      final dt = DateTime.fromMillisecondsSinceEpoch(timestamp.toInt());
-      return DateFormat.Hm().format(dt);
-    }
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ListView(
+              children: [
+                DropdownButtonFormField<Crop>(
+                  value: _selectedCrop,
+                  items: crops
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c.name)))
+                      .toList(),
+                  onChanged: (c) {
+                    if (c == null) return;
+                    setState(() => _selectedCrop = c);
+                    _populateControllers(c);
+                  },
+                  decoration: const InputDecoration(labelText: 'Select crop'),
+                ),
+                const SizedBox(height: 16),
+                _rangeField('Humidity Min (%)', _humMin),
+                _rangeField('Humidity Max (%)', _humMax),
+                _rangeField('Temperature Min (°C)', _tempMin),
+                _rangeField('Temperature Max (°C)', _tempMax),
+                _rangeField('Light Min (lux)', _lightMin),
+                _rangeField('Light Max (lux)', _lightMax),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: _selectedCrop == null
+                      ? null
+                      : () async {
+                    final settings = {
+                      'humidity': {
+                        'min': double.tryParse(_humMin.text) ?? 0,
+                        'max': double.tryParse(_humMax.text) ?? 0,
+                      },
+                      'temperature': {
+                        'min': double.tryParse(_tempMin.text) ?? 0,
+                        'max': double.tryParse(_tempMax.text) ?? 0,
+                      },
+                      'light': {
+                        'min': double.tryParse(_lightMin.text) ?? 0,
+                        'max': double.tryParse(_lightMax.text) ?? 0,
+                      },
+                    };
 
-    final labelCount = 4;
-    final labelPositions = List.generate(labelCount, (i) {
-      return minX + ((maxX - minX) / (labelCount - 1)) * i;
-    });
+                    await ds.updateCropSettings(_selectedCrop!.id, settings);
 
-    return SizedBox(
-      height: 300,
-      child: LineChart(
-        LineChartData(
-          minX: minX,
-          maxX: maxX,
-          minY: 0,
-          maxY: 100,
-          lineBarsData: [
-            LineChartBarData(
-              spots: spots,
-              isCurved: true,
-              color: Colors.blue,
-              dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(show: true),
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Settings saved')),
+                      );
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
             ),
-          ],
-          titlesData: FlTitlesData(
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 40,
-                getTitlesWidget: (value, meta) {
-                  const tolerance = 5000;
-                  final isExactLabel = labelPositions.any((p) => (value - p).abs() < tolerance);
-
-                  if (!isExactLabel) return const SizedBox.shrink();
-
-                  return SideTitleWidget(
-                    meta: meta,
-                    space: 8,
-                    child: Transform.rotate(
-                      angle: -0.5,
-                      child: Text(
-                        formatTime(value),
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 40,
-                interval: 20,
-                getTitlesWidget: (value, meta) {
-                  return SideTitleWidget(
-                    meta: meta,
-                    space: 8,
-                    child: Text('${value.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 10)),
-                  );
-                },
-              ),
-            ),
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          gridData: FlGridData(show: true),
-          borderData: FlBorderData(
-            show: true,
-            border: const Border(
-              left: BorderSide(),
-              bottom: BorderSide(),
-            ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
-
-
-
-  @override
-  Widget build(BuildContext context) {
-    final ds = context.read<DataService>();
-    return Scaffold(
-      appBar: AppBar(title: const Text('Irrigation Settings')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  StreamBuilder<List<SensorData>>(
-                    stream: ds.lastHourSensorDataStream(),
-
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const CircularProgressIndicator();
-                      return _buildMoistureChart(snapshot.data!);
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  Text('Soil moisture min: ${_min.toStringAsFixed(0)} %'),
-                  const SizedBox(height: 16),
-                  Text('Soil moisture max: ${_max.toStringAsFixed(0)} %'),
-                  Slider(
-                    value: _max,
-                    min: _min + 5,
-                    max: 100,
-                    divisions: 20,
-                    label: _max.toStringAsFixed(0),
-                    onChanged: (v) => setState(() => _max = v),
-                  ),
-                  const Spacer(),
-                  ElevatedButton(
-                    onPressed: () async {
-                      await ds.saveSettings(
-                          IrrigationSettings(moistMin: _min, moistMax: _max));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Saved!')));
-                    },
-                    child: const Text('Save'),
-                  )
-                ],
-              ),
-            ),
-    );
+  // ---------- helpers ----------
+  void _populateControllers(Crop c) {
+    final hum   = c.settings['humidity']    ?? {};
+    final temp  = c.settings['temperature'] ?? {};
+    final light = c.settings['light']       ?? {};
+    _humMin.text   = (hum['min']   ?? '').toString();
+    _humMax.text   = (hum['max']   ?? '').toString();
+    _tempMin.text  = (temp['min']  ?? '').toString();
+    _tempMax.text  = (temp['max']  ?? '').toString();
+    _lightMin.text = (light['min'] ?? '').toString();
+    _lightMax.text = (light['max'] ?? '').toString();
   }
+
+  Widget _rangeField(String label, TextEditingController ctrl) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: TextField(
+      controller: ctrl,
+      keyboardType:
+      const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(labelText: label),
+    ),
+  );
 }

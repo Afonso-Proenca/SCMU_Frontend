@@ -22,6 +22,9 @@ class DataService {
       String type,
       Map<String, Map<String, double>> settings,
       ) async {
+      if (name.trim().isEmpty) {
+        throw ArgumentError('Crop name cannot be empty');
+      }
     final ref = _db.child('crops').push();
 
     // Começamos pelos dados introduzidos pelo utilizador
@@ -57,6 +60,41 @@ class DataService {
       'type': type,
       'settings': finalSettings,
     });
+  }
+
+  Stream<List<SensorData>> sensorDataStream(
+      String cropId,
+      String cropType,
+          {int limit = 50}
+      ) {
+    return _db
+        .child('crops/$cropId/$cropType/sensors')
+        .orderByKey()
+        .limitToLast(limit)
+        .onValue
+        .map((event) {
+      final raw = Map<String, dynamic>.from(
+          event.snapshot.value as Map<dynamic, dynamic>? ?? {});
+
+      final list = raw.entries
+          .map((e) => SensorData.fromMap(
+        e.key.toString(),
+        Map<String, dynamic>.from(e.value as Map),
+      ))
+          .toList()
+        ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+      return list;
+    });
+  }
+
+
+
+  Future<void> updateCropSettings(
+      String cropId,
+      Map<String, Map<String, double>> settings,
+      ) {
+    return _db.child('crops/$cropId/settings').set(settings);
   }
 
   Future<void> deleteCrop(String id) async {
@@ -145,8 +183,13 @@ class Crop {
       m['name'] as String,
       m['type'] as String,
       Map<String, Map<String, double>>.from(
-        (m['settings'] as Map? ?? {}).map((k, v) =>
-            MapEntry(k.toString(), Map<String, double>.from(v as Map))),
+        (m['settings'] as Map? ?? {}).map((k, v) {
+          final inner = Map<String, dynamic>.from(v as Map);
+          final converted = inner.map(
+                (ik, iv) => MapEntry(ik.toString(), (iv as num).toDouble()),
+          );
+          return MapEntry(k.toString(), converted);
+        }),
       ),
     );
   }

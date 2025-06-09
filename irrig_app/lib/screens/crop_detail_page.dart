@@ -1,130 +1,133 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-
 import '../services/data_service.dart';
-import '../services/user_service.dart';
 
-
-
-/// Esta “porta” verifica se o utilizador atual tem permissão para ver o detalhe:
-/// - É admin → deixa entrar
-/// - Caso contrário, verifica se a crop.id está na lista de crops atribuídas a ele.
-/// Se não tiver permissão, mostra uma mensagem de acesso negado.
 class CropDetailGate extends StatelessWidget {
   final Crop crop;
-  const CropDetailGate({Key? key, required this.crop}) : super(key: key);
+  const CropDetailGate({required this.crop, Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final userSvc = context.read<UserService>();
+    final ds = context.read<DataService>();
 
-    return FutureBuilder<List<String>>(
-      future: userSvc.myCropIds(),
-      builder: (context, futureSnap) {
-        if (futureSnap.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    return Scaffold(
+      appBar: AppBar(title: Text('Crop • ${crop.name}')),
+      body: StreamBuilder<List<SensorData>>(
+        stream: ds.sensorDataStream(crop.id, crop.type), // últimos 50 valores
+        builder: (_, snap) {
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final data = snap.data!;
+          if (data.isEmpty) {
+            return const Center(child: Text('No sensor data yet'));
+          }
 
-        final allowedList = futureSnap.data ?? <String>[];
-        print('Allowed crop IDs for user: $allowedList');
-        final bool isAssigned = allowedList.contains(crop.id);
+          // ---------- prepara pontos ----------
+          final tempSpots = <FlSpot>[];
+          final humSpots  = <FlSpot>[];
+          for (var i = 0; i < data.length; i++) {
+            tempSpots.add(FlSpot(i.toDouble(), data[i].temperature));
+            humSpots.add(FlSpot(i.toDouble(), data[i].moisture));
+          }
 
-        return StreamBuilder<bool>(
-          stream: userSvc.isAdminStream,
-          builder: (context, adminSnap) {
-            final bool isAdmin = adminSnap.data ?? false;
-
-            if (isAdmin || isAssigned) {
-              // Se for admin OU tiver a crop atribuída → mostra os detalhes
-              return CropDetailPage(crop: crop);
-            } else {
-              // Caso contrário, acesso negado
-              return Scaffold(
-                appBar: AppBar(title: const Text('Crop details')),
-                body: const Center(
-                  child: Text(
-                    'Access denied: you are not assigned to this crop.',
-                    style: TextStyle(fontSize: 16, color: Colors.red),
-                    textAlign: TextAlign.center,
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Type: ${crop.type}',
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: LineChart(
+                    LineChartData(
+                      titlesData: FlTitlesData(
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 36,
+                            interval: tempSpots.length ~/ 4 > 0
+                                ? (tempSpots.length / 4)
+                                : 1,
+                            getTitlesWidget: (value, meta) {
+                              final idx = value.round();
+                              if (idx < 0 || idx >= data.length) {
+                                return const SizedBox.shrink();
+                              }
+                              final ts = data[idx].timestamp;
+                              return SideTitleWidget(
+                                meta: meta,
+                                child: Text(
+                                  DateFormat.Hm().format(ts),
+                                  style: const TextStyle(fontSize: 9),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            interval: 5,
+                          ),
+                        ),
+                      ),
+                      gridData: FlGridData(show: true),
+                      borderData: FlBorderData(show: true),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: tempSpots,
+                          isCurved: true,
+                          barWidth: 2,
+                          dotData: FlDotData(show: false),
+                        ),
+                        LineChartBarData(
+                          spots: humSpots,
+                          isCurved: true,
+                          barWidth: 2,
+                          dotData: FlDotData(show: false),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              );
-            }
-          },
-        );
-      },
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: const [
+                    _LegendDot(label: 'Temperature (°C)'),
+                    _LegendDot(label: 'Humidity (%)'),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
-/// Este widget mostra os detalhes completos da Crop.
-/// Aqui deves colocar gráficos, histórico, formulários de edição, etc.
-/// No exemplo abaixo colocámos apenas um layout de exemplo.
-class CropDetailPage extends StatelessWidget {
-  final Crop crop;
-  const CropDetailPage({Key? key, required this.crop}) : super(key: key);
+class _LegendDot extends StatelessWidget {
+  final String label;
+  const _LegendDot({required this.label});
 
   @override
-  Widget build(BuildContext context) {
-    // Podes ler mais dados da crop através do DataService, se houver um endpoint para isso.
-    final ds = context.read<DataService>();
-    final userSvc = context.read<UserService>();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Crop: ${crop.name}'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Exibe informações básicas
-
-            Text('Type: ${crop.type}', style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 16),
-
-            // Exemplo de espaço para gráficos/histórico
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.bar_chart, size: 64, color: Colors.blue),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Graphs & historical data go here',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            /*// Podes adicionar botões de “Editar”, “Ver métricas em tempo real”, etc.
-            // Caso o utilizador seja admin ou tenha permissão, permite edição:
-            StreamBuilder<bool>(
-              stream: userSvc.isAdminStream,
-              builder: (context, adminSnap) {
-                final bool isAdmin = adminSnap.data ?? false;
-                if (isAdmin) {
-                  return ElevatedButton.icon(
-                    onPressed: () {
-                      // Exemplo de ação extra só para admin
-                    },
-                    icon: const Icon(Icons.edit),
-                    label: const Text('Edit Crop'),
-                  );
-                } else {
-                  return const SizedBox.shrink();
-                }
-              },
-            ),*/
-          ],
+  Widget build(BuildContext context) => Row(
+    children: [
+      Container(
+        width: 10,
+        height: 10,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.blue,
         ),
       ),
-    );
-  }
+      const SizedBox(width: 4),
+      Text(label, style: const TextStyle(fontSize: 12)),
+    ],
+  );
 }
