@@ -48,8 +48,15 @@ class _IrrigationSettingsPageState extends State<IrrigationSettingsPage> {
             return const Center(child: Text('No crops found'));
           }
 
-          // primeira selecção
-          _selectedCrop ??= crops.first;
+          // ---- sincroniza _selectedCrop com a lista que acabou de chegar ----
+          if (_selectedCrop == null) {
+            _selectedCrop = crops.first;
+          } else {
+            final match = crops
+                .where((c) => c.id == _selectedCrop!.id)
+                .toList(); // 0 ou 1
+            _selectedCrop = match.isNotEmpty ? match.first : crops.first;
+          }
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
@@ -79,29 +86,29 @@ class _IrrigationSettingsPageState extends State<IrrigationSettingsPage> {
                   onPressed: _selectedCrop == null
                       ? null
                       : () async {
-                    final settings = {
-                      'humidity': {
-                        'min': double.tryParse(_humMin.text) ?? 0,
-                        'max': double.tryParse(_humMax.text) ?? 0,
-                      },
-                      'temperature': {
-                        'min': double.tryParse(_tempMin.text) ?? 0,
-                        'max': double.tryParse(_tempMax.text) ?? 0,
-                      },
-                      'light': {
-                        'min': double.tryParse(_lightMin.text) ?? 0,
-                        'max': double.tryParse(_lightMax.text) ?? 0,
-                      },
-                    };
+                          final settings = {
+                            'humidity': {
+                              'min': double.tryParse(_humMin.text) ?? 0,
+                              'max': double.tryParse(_humMax.text) ?? 0,
+                            },
+                            'temperature': {
+                              'min': double.tryParse(_tempMin.text) ?? 0,
+                              'max': double.tryParse(_tempMax.text) ?? 0,
+                            },
+                            'light': {
+                              'min': double.tryParse(_lightMin.text) ?? 0,
+                              'max': double.tryParse(_lightMax.text) ?? 0,
+                            },
+                          };
 
-                    await ds.updateCropSettings(_selectedCrop!.id, settings);
+                          await ds.updateCropSettings(_selectedCrop!.id, settings);
 
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Settings saved')),
-                      );
-                    }
-                  },
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Settings saved')),
+                            );
+                          }
+                        },
                   child: const Text('Save'),
                 ),
               ],
@@ -126,12 +133,12 @@ class _IrrigationSettingsPageState extends State<IrrigationSettingsPage> {
   }
 
   Widget _rangeField(String label, TextEditingController ctrl) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: TextField(
-      controller: ctrl,
-      keyboardType:
-      const TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(labelText: label),
-    ),
-  );
+        padding: const EdgeInsets.only(bottom: 12),
+        child: TextField(
+          controller: ctrl,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(labelText: label),
+        ),
+      );
 }
