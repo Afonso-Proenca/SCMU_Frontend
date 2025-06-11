@@ -92,176 +92,188 @@ class _CropDetailGateState extends State<CropDetailGate> {
 
             // --------------------- página de detalhes ------------------------
 
-                   return Scaffold(
+                         return Scaffold(
               appBar: AppBar(title: Text('Crop • ${widget.crop.name}')),
               body: StreamBuilder<List<SensorData>>(
-                stream: ds.lastHourSensorDataStream(widget.crop.id,widget.crop.type),
+                stream: ds.lastHourSensorDataStream(widget.crop.id, widget.crop.type),
                 builder: (_, snap) {
                   if (!snap.hasData || snap.data!.isEmpty) {
                     if (snap.connectionState == ConnectionState.waiting && !showNoDataMessage) {
                       return const Center(child: CircularProgressIndicator());
-                    } else {
-                      return const Center(child: Text('No sensor data yet'));
                     }
+                    return const Center(child: Text('No sensor data yet'));
                   }
+
                   final data = snap.data!;
+                  final temp = <FlSpot>[];
+                  final hum  = <FlSpot>[];
+                  final lux  = <FlSpot>[];
 
-                  final tempSpots = <FlSpot>[];
-                  final humSpots = <FlSpot>[];
                   for (var i = 0; i < data.length; i++) {
-                    tempSpots.add(FlSpot(i.toDouble(), data[i].temperature));
-                    humSpots.add(FlSpot(i.toDouble(), data[i].moisture));
+                    temp.add(FlSpot(i.toDouble(), data[i].temperature));
+                    hum .add(FlSpot(i.toDouble(), data[i].moisture));
+                    lux .add(FlSpot(i.toDouble(), data[i].light));
                   }
 
-                  return Padding(
-                    padding: const EdgeInsets.all(16.0),
+                  // ——— escala dinâmica ———
+                  final maxVal = [
+                    ...data.map((e) => e.temperature),
+                    ...data.map((e) => e.moisture),
+                    ...data.map((e) => e.light)
+                  ].reduce((a, b) => a > b ? a : b);
+                  double maxY = (maxVal * 1.1).clamp(10, double.infinity);
+                  final intervalY = (maxY / 5).roundToDouble();
+
+                 return Padding(
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Type: ${widget.crop.type}',
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 16),
+                        // ——— gráfico + legenda ———
                         Expanded(
-                          child: LineChart(
-                            LineChartData(
-                              minY: 0,
-                              titlesData: FlTitlesData(
-                                bottomTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    reservedSize: 36,
-                                    interval: tempSpots.length ~/ 4 > 0
-                                        ? (tempSpots.length / 4)
-                                        : 1,
-                                    getTitlesWidget: (value, meta) {
-                                      final idx = value.round();
-                                      if (idx < 0 || idx >= data.length) {
-                                        return const SizedBox.shrink();
-                                      }
-                                      final ts = data[idx].timestamp;
-                                      return SideTitleWidget(
-                                        meta: meta,
-                                        child: Text(
-                                          DateFormat.Hm().format(ts),
-                                          style: const TextStyle(fontSize: 9),
+                          child: Stack(
+                            children: [
+                              // gráfico
+                              LineChart(
+                                LineChartData(
+                                  minY: 0,
+                                  maxY: maxY,
+                                  titlesData: FlTitlesData(
+                                    topTitles: AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false)),
+                                    rightTitles: AxisTitles(
+                                        sideTitles:
+                                            SideTitles(showTitles: false)),
+                                    bottomTitles: AxisTitles(
+                                      sideTitles: SideTitles(
+                                        showTitles: true,
+                                        reservedSize: 32,
+                                        interval: (data.length / 4)
+                                            .ceilToDouble()
+                                            .clamp(1, double.infinity),
+                                        getTitlesWidget: (value, meta) {
+                                          final idx = value.round();
+                                          if (idx < 0 || idx >= data.length) {
+                                            return const SizedBox.shrink();
+                                          }
+                                          return SideTitleWidget(
+                                            meta: meta,
+                                            child: Text(
+                                              DateFormat.Hm()
+                                                  .format(data[idx].timestamp),
+                                              style: const TextStyle(
+                                                  fontSize: 10),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    leftTitles: AxisTitles(
+                                      sideTitles: SideTitles(
+                                        showTitles: true,
+                                        interval: intervalY,
+                                        reservedSize: 40,
+                                        getTitlesWidget: (v, _) => Text(
+                                          v.toInt().toString(),
+                                          style: const TextStyle(fontSize: 10),
                                         ),
-                                      );
-                                    },
+                                      ),
+                                    ),
                                   ),
+                                  gridData: FlGridData(
+                                      drawVerticalLine: true,
+                                      horizontalInterval: intervalY),
+                                  borderData: FlBorderData(show: true),
+                                  lineBarsData: [
+                                    _bar(temp, Colors.redAccent),
+                                    _bar(hum, Colors.blueAccent),
+                                    _bar(lux, Colors.amber),
+                                  ],
                                 ),
-                                leftTitles: AxisTitles(
-                                  sideTitles: SideTitles(
-                                    showTitles: true,
-                                    interval: 5,
+                              ),
+                              // legenda fixa
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Card(
+                                  elevation: 2,
+                                  color: Theme.of(context)
+                                      .cardColor
+                                      .withOpacity(0.9),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: const [
+                                        _LegendDot(
+                                            label: 'Temperature (°C)',
+                                            color: Colors.redAccent),
+                                        SizedBox(height: 4),
+                                        _LegendDot(
+                                            label: 'Humidity (%)',
+                                            color: Colors.blueAccent),
+                                        SizedBox(height: 4),
+                                        _LegendDot(
+                                            label: 'Light',
+                                            color: Colors.amber),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
-                              gridData: FlGridData(show: true),
-                              borderData: FlBorderData(show: true),
-                              lineBarsData: [
-                                LineChartBarData(
-                                  spots: tempSpots,
-                                  isCurved: true,
-                                  barWidth: 2,
-                                  color: Colors.redAccent,
-                                  dotData: FlDotData(show: false),
-                                ),
-                                LineChartBarData(
-                                  spots: humSpots,
-                                  isCurved: true,
-                                  barWidth: 2,
-                                   color: Colors.blueAccent,
-                                  dotData: FlDotData(show: false),
-                                ),
-                              ],
-                            ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: const [
-                                               _LegendDot(
-
-                                label: 'Temperature (°C)',
-
-                                color: Colors.redAccent),
-
-                            _LegendDot(
-
-                                label: 'Humidity (%)',
-
-                                color: Colors.blueAccent),
-
-                          ],
-
-                        ),
-
                       ],
-
                     ),
-
                   );
-
                 },
-
               ),
-
             );
-
           },
-
         );
-
       },
-
     );
-
   }
 
-}
-
-
-
-class _LegendDot extends StatelessWidget {
-
-  final String label;
-
-  final Color color;
-
-
-
-  const _LegendDot({required this.label, required this.color, Key? key})
-
-      : super(key: key);
-
-
-
-  @override
-
-  Widget build(BuildContext context) => Row(
-
-        children: [
-
-          Container(
-
-            width: 10,
-
-            height: 10,
-
-            decoration:
-
-                BoxDecoration(shape: BoxShape.circle, color: color),
-
-          ),
-
-          const SizedBox(width: 4),
-
-          Text(label, style: const TextStyle(fontSize: 12)),
-
-        ],
-
+  //  helpers -----------------------------------------------------------------
+  LineChartBarData _bar(List<FlSpot> spots, Color c) => LineChartBarData(
+        spots: spots,
+        isCurved: true,
+        barWidth: 2,
+        color: c,
+        dotData: FlDotData(show: false),
       );
 
+  Scaffold _deny() => Scaffold(
+        appBar: AppBar(title: Text('Crop • ${widget.crop.name}')),
+        body: const Center(child: Text('Access denied')),
+      );
 }
 
+class _LegendDot extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _LegendDot({required this.label, required this.color, Key? key})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Container(
+              width: 10,
+              height: 10,
+              decoration:
+                  BoxDecoration(color: color, shape: BoxShape.circle)),
+          const SizedBox(width: 4),
+          Text(label, style: const TextStyle(fontSize: 12)),
+        ],
+      );
+}
