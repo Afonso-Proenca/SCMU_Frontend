@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 
-/// Water‑tank screen showing:
-///  • Real‑time tank level (0‑100 %)
-///  • Current pump status (ON / OFF)
-///  • Buttons to **activate** or **deactivate** irrigation
-/// (continua a ser uma função‑widget, sem criar novas classes)
+
 Widget waterLevelPage(BuildContext context) {
   final db = FirebaseDatabase.instance;
 
