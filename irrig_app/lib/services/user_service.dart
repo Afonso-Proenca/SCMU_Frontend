@@ -4,21 +4,19 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class UserService {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final _db  = FirebaseDatabase.instance.ref();
   final _uid = FirebaseAuth.instance.currentUser!.uid;
 
   /// Stream que devolve true/false conforme o utilizador tenha
   /// a *custom claim* `cropAdmin = true`.
-  Stream<bool> get isAdminStream async* {
-    final userChanges = FirebaseAuth.instance.userChanges();
-    await for (final user in userChanges) {
-      if (user == null) {
-        yield false;
-        continue;
-      }
-      final idTokenResult = await user.getIdTokenResult(true);
-      yield idTokenResult.claims?['cropAdmin'] == true;
-    }
+  Stream<bool> get isAdminStream {
+    return _auth.idTokenChanges().asyncMap((user) async {
+      if (user == null) return false;
+
+      final token = await user.getIdTokenResult();
+      return token.claims?['cropAdmin'] == true;
+    });
   }
 
   /// Lista de **IDs** das crops atribuídas a este utilizador.
