@@ -12,6 +12,7 @@ class CropDetailGate extends StatefulWidget {
   final Crop crop;
 
   const CropDetailGate({required this.crop, Key? key}) : super(key: key);
+
   @override
   _CropDetailGateState createState() => _CropDetailGateState();
 }
@@ -23,21 +24,12 @@ class _CropDetailGateState extends State<CropDetailGate> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 20), () {
-      if (mounted) {
-        setState(() {
-          showNoDataMessage = true;
-        });
-      }
-    });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     super.dispose();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +55,7 @@ class _CropDetailGateState extends State<CropDetailGate> {
             print(
                 'CropDetailGate: isAdmin=$isAdmin, isAssigned=$isAssigned, cropId=${widget.crop.id}, allowedList=$allowedList');
 
-            if (!isAssigned && !isAdmin){
+            if (!isAssigned && !isAdmin) {
               return Scaffold(
                 appBar: AppBar(title: Text('Crop • ${widget.crop.name}')),
                 body: Center(
@@ -92,13 +84,15 @@ class _CropDetailGateState extends State<CropDetailGate> {
 
             // --------------------- página de detalhes ------------------------
 
-                         return Scaffold(
+            return Scaffold(
               appBar: AppBar(title: Text('Crop • ${widget.crop.name}')),
               body: StreamBuilder<List<SensorData>>(
-                stream: ds.lastHourSensorDataStream(widget.crop.id, widget.crop.type),
+                stream: ds.lastHourSensorDataStream(
+                    widget.crop.id, widget.crop.type),
                 builder: (_, snap) {
                   if (!snap.hasData || snap.data!.isEmpty) {
-                    if (snap.connectionState == ConnectionState.waiting && !showNoDataMessage) {
+                    if (snap.connectionState == ConnectionState.waiting &&
+                        !showNoDataMessage) {
                       return const Center(child: CircularProgressIndicator());
                     }
                     return const Center(child: Text('No sensor data yet'));
@@ -106,13 +100,13 @@ class _CropDetailGateState extends State<CropDetailGate> {
 
                   final data = snap.data!;
                   final temp = <FlSpot>[];
-                  final hum  = <FlSpot>[];
-                  final lux  = <FlSpot>[];
+                  final hum = <FlSpot>[];
+                  final lux = <FlSpot>[];
 
                   for (var i = 0; i < data.length; i++) {
                     temp.add(FlSpot(i.toDouble(), data[i].temperature));
-                    hum .add(FlSpot(i.toDouble(), data[i].moisture));
-                    lux .add(FlSpot(i.toDouble(), data[i].light));
+                    hum.add(FlSpot(i.toDouble(), data[i].moisture));
+                    lux.add(FlSpot(i.toDouble(), data[i].light));
                   }
 
                   // ——— escala dinâmica ———
@@ -124,7 +118,7 @@ class _CropDetailGateState extends State<CropDetailGate> {
                   double maxY = (maxVal * 1.1).clamp(10, double.infinity);
                   final intervalY = (maxY / 5).roundToDouble();
 
-                 return Padding(
+                  return Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,8 +159,8 @@ class _CropDetailGateState extends State<CropDetailGate> {
                                             child: Text(
                                               DateFormat.Hm()
                                                   .format(data[idx].timestamp),
-                                              style: const TextStyle(
-                                                  fontSize: 10),
+                                              style:
+                                                  const TextStyle(fontSize: 10),
                                             ),
                                           );
                                         },
@@ -198,32 +192,35 @@ class _CropDetailGateState extends State<CropDetailGate> {
                               // legenda fixa
                               Positioned(
                                 top: 8,
-                                right: 8,
-                                child: Card(
-                                  elevation: 2,
-                                  color: Theme.of(context)
-                                      .cardColor
-                                      .withOpacity(0.9),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: const [
-                                        _LegendDot(
-                                            label: 'Temperature (°C)',
-                                            color: Colors.redAccent),
-                                        SizedBox(height: 4),
-                                        _LegendDot(
-                                            label: 'Humidity (%)',
-                                            color: Colors.blueAccent),
-                                        SizedBox(height: 4),
-                                        _LegendDot(
-                                            label: 'Light',
-                                            color: Colors.amber),
-                                      ],
+                                left: 5,
+                                child: IgnorePointer(
+                                  ignoring: true,
+                                  child: Card(
+                                    elevation: 2,
+                                    color: Theme.of(context)
+                                        .cardColor
+                                        .withOpacity(0.9),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: const [
+                                          _LegendDot(
+                                              label: 'Temperature (°C)',
+                                              color: Colors.redAccent),
+                                          SizedBox(height: 4),
+                                          _LegendDot(
+                                              label: 'Humidity (%)',
+                                              color: Colors.blueAccent),
+                                          SizedBox(height: 4),
+                                          _LegendDot(
+                                              label: 'Light',
+                                              color: Colors.amber),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -261,6 +258,7 @@ class _CropDetailGateState extends State<CropDetailGate> {
 class _LegendDot extends StatelessWidget {
   final String label;
   final Color color;
+
   const _LegendDot({required this.label, required this.color, Key? key})
       : super(key: key);
 
@@ -270,8 +268,7 @@ class _LegendDot extends StatelessWidget {
           Container(
               width: 10,
               height: 10,
-              decoration:
-                  BoxDecoration(color: color, shape: BoxShape.circle)),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 4),
           Text(label, style: const TextStyle(fontSize: 12)),
         ],
