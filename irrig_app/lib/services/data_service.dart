@@ -119,8 +119,9 @@ class DataService {
   
 
  // ---------- Sensor data ----------
- Stream<List<SensorData>> lastHourSensorDataStream(String cropId) {
-    final String path = 'crops/$cropId/sensors';
+  Stream<List<SensorData>> lastHourSensorDataStream(
+      String cropId, String cropType) {
+    final path = 'crops/$cropId/$cropType/sensors';
 
     return _db.child(path).onValue.map((event) {
       if (event.snapshot.value == null) return <SensorData>[];

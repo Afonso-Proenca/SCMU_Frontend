@@ -67,7 +67,7 @@ class CropDetailGate extends StatelessWidget {
                    return Scaffold(
               appBar: AppBar(title: Text('Crop • ${crop.name}')),
               body: StreamBuilder<List<SensorData>>(
-                stream: ds.lastHourSensorDataStream(crop.id),
+                stream: ds.lastHourSensorDataStream(crop.id,crop.type),
                 builder: (_, snap) {
                   if (!snap.hasData || snap.data!.isEmpty) {
                     return const Center(child: Text('No sensor data…'));
