@@ -205,10 +205,14 @@ class WaterTankInfo {
 
   WaterTankInfo({required this.level, required this.pumpOn});
 
-  factory WaterTankInfo.fromMap(Map<String, dynamic> m) => WaterTankInfo(
-        level: (m['level'] as num).toDouble(),
-        pumpOn: m['pumpOn'] == true,
-      );
+  factory WaterTankInfo.fromMap(Map<String, dynamic> m) {
+    final rawDist = (m['level'] as num).toDouble();
+    final pct = ((1 / rawDist) - (1 / 12)) * 400;
+    return WaterTankInfo(
+      level: pct.clamp(0, 100),
+      pumpOn: m['pumpOn'] == true,
+    );
+  }
 }
 
 class SensorData {

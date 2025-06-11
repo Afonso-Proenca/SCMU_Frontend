@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 
@@ -29,17 +31,21 @@ Widget waterLevelPage(BuildContext context) {
 
   // ------------------------------------------------------------------------
   return Scaffold(
-    appBar: AppBar(
-      title: const Text('Water Tank'),
-      centerTitle: true,
-    ),
+    appBar: AppBar(title: const Text('Water Tank'), centerTitle: true),
     body: StreamBuilder<DatabaseEvent>(
       stream: _levelRef.onValue,
       builder: (context, levelSnap) {
-        double level = 0;
+        double pct = 0;
+
         if (levelSnap.hasData && levelSnap.data!.snapshot.value != null) {
           final raw = levelSnap.data!.snapshot.value;
-          if (raw is num) level = raw.toDouble().clamp(0, 100);
+          if (raw is num && raw > 0) {
+            // d = distância em cm; fórmula fornecida
+            pct = ((1 / raw.toDouble()) - (1 / 12)) * 400;
+            if (pct.isNaN || pct.isInfinite) pct = 0;
+            pct = max(0, pct);
+            pct = pct.clamp(0, 100);
+          }
         }
 
         // Pump status
@@ -79,12 +85,12 @@ Widget waterLevelPage(BuildContext context) {
                             height: 220,
                             width: 220,
                             child: CircularProgressIndicator(
-                              value: level / 100,
+                              value: pct / 100,
                               strokeWidth: 16,
                             ),
                           ),
                           Text(
-                            '${level.toStringAsFixed(0)}%',
+                            '${pct.toStringAsFixed(0)}%',
                             style: Theme.of(context).textTheme.displaySmall,
                           ),
                         ],
