@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../services/data_service.dart';
+
 import '../services/user_service.dart';
 import 'crops_page.dart';
 import 'irrigation_settings_page.dart';
@@ -60,10 +60,10 @@ class MainPage extends StatelessWidget {
               _MenuTile(
                 icon: Icons.water_drop,
                 label: 'Water tank info',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const WaterTankInfoPage()),
-                ),
+             onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (ctx) => waterLevelPage(ctx)),
+              ),
               ),
             ];
 

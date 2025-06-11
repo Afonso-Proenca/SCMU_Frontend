@@ -33,9 +33,13 @@ class BackOfficePage extends StatelessWidget {
             _MenuTile(
               icon: Icons.water_drop,
               label: 'Water tank info',
-              onTap: () => _navigate(context, const WaterTankInfoPage()),
+             onTap: () => _navigate(context, waterLevelPage(context)),
             ),
-            _MenuTile(icon: Icons.add, label: 'Add Crop', onTap: () => _navigate(context, const AddCropPage())),
+            _MenuTile(
+              icon: Icons.add,
+              label: 'Add Crop',
+              onTap: () => _navigate(context, const AddCropPage()),
+            ),
           ],
         ),
       ),
