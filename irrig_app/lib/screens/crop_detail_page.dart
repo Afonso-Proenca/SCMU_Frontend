@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../services/data_service.dart';
 import '../services/user_service.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class CropDetailGate extends StatelessWidget {
   final Crop crop;
@@ -61,21 +62,18 @@ class CropDetailGate extends StatelessWidget {
               );
             }
 
-            return Scaffold(
+            // --------------------- página de detalhes ------------------------
+
+                   return Scaffold(
               appBar: AppBar(title: Text('Crop • ${crop.name}')),
               body: StreamBuilder<List<SensorData>>(
-                stream: ds.sensorDataStream(crop.id, crop.type),
-                // últimos 50 valores
+                stream: ds.lastHourSensorDataStream(crop.id),
                 builder: (_, snap) {
-                  if (!snap.hasData) {
-                    return const Center(child: CircularProgressIndicator());
+                  if (!snap.hasData || snap.data!.isEmpty) {
+                    return const Center(child: Text('No sensor data…'));
                   }
                   final data = snap.data!;
-                  if (data.isEmpty) {
-                    return const Center(child: Text('No sensor data yet'));
-                  }
 
-                  // ---------- prepara pontos ----------
                   final tempSpots = <FlSpot>[];
                   final humSpots = <FlSpot>[];
                   for (var i = 0; i < data.length; i++) {
@@ -94,6 +92,7 @@ class CropDetailGate extends StatelessWidget {
                         Expanded(
                           child: LineChart(
                             LineChartData(
+                              minY: 0,
                               titlesData: FlTitlesData(
                                 bottomTitles: AxisTitles(
                                   sideTitles: SideTitles(
@@ -132,12 +131,14 @@ class CropDetailGate extends StatelessWidget {
                                   spots: tempSpots,
                                   isCurved: true,
                                   barWidth: 2,
+                                  color: Colors.redAccent,
                                   dotData: FlDotData(show: false),
                                 ),
                                 LineChartBarData(
                                   spots: humSpots,
                                   isCurved: true,
                                   barWidth: 2,
+                                   color: Colors.blueAccent,
                                   dotData: FlDotData(show: false),
                                 ),
                               ],
@@ -148,41 +149,87 @@ class CropDetailGate extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: const [
-                            _LegendDot(label: 'Temperature (°C)'),
-                            _LegendDot(label: 'Humidity (%)'),
+                                               _LegendDot(
+
+                                label: 'Temperature (°C)',
+
+                                color: Colors.redAccent),
+
+                            _LegendDot(
+
+                                label: 'Humidity (%)',
+
+                                color: Colors.blueAccent),
+
                           ],
+
                         ),
+
                       ],
+
                     ),
+
                   );
+
                 },
+
               ),
+
             );
+
           },
+
         );
+
       },
+
     );
+
   }
+
 }
+
+
 
 class _LegendDot extends StatelessWidget {
+
   final String label;
 
-  const _LegendDot({required this.label});
+  final Color color;
+
+
+
+  const _LegendDot({required this.label, required this.color, Key? key})
+
+      : super(key: key);
+
+
 
   @override
+
   Widget build(BuildContext context) => Row(
+
         children: [
+
           Container(
+
             width: 10,
+
             height: 10,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.blue,
-            ),
+
+            decoration:
+
+                BoxDecoration(shape: BoxShape.circle, color: color),
+
           ),
+
           const SizedBox(width: 4),
+
           Text(label, style: const TextStyle(fontSize: 12)),
+
         ],
+
       );
+
 }
+

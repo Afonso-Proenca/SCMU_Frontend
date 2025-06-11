@@ -62,31 +62,6 @@ class DataService {
     });
   }
 
-  Stream<List<SensorData>> sensorDataStream(
-      String cropId,
-      String cropType,
-          {int limit = 50}
-      ) {
-    return _db
-        .child('crops/$cropId/$cropType/sensors')
-        .orderByKey()
-        .limitToLast(limit)
-        .onValue
-        .map((event) {
-      final raw = Map<String, dynamic>.from(
-          event.snapshot.value as Map<dynamic, dynamic>? ?? {});
-
-      final list = raw.entries
-          .map((e) => SensorData.fromMap(
-        e.key.toString(),
-        Map<String, dynamic>.from(e.value as Map),
-      ))
-          .toList()
-        ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-      return list;
-    });
-  }
 
 
 
@@ -140,35 +115,36 @@ class DataService {
     await _db.child('settings').set(s.toMap());
   }
 
-  // ---------- Water Tank ----------
-  Stream<WaterTankInfo> tankStream() =>
-      _db.child('water_tank').onValue.map((e) => WaterTankInfo.fromMap(
-            Map<String, dynamic>.from(e.snapshot.value as Map),
-          ));
+  
+  
 
-  // ---------- Sensor data ----------
-  Stream<List<SensorData>> lastHourSensorDataStream() {
-    return _db.child('sensordata').onValue.map((event) {
+ // ---------- Sensor data ----------
+ Stream<List<SensorData>> lastHourSensorDataStream(String cropId) {
+    final String path = 'crops/$cropId/sensors';
+
+    return _db.child(path).onValue.map((event) {
+      if (event.snapshot.value == null) return <SensorData>[];
+
       final now = DateTime.now();
       final oneHourAgo = now.subtract(const Duration(hours: 1));
       final data = Map<String, dynamic>.from(event.snapshot.value as Map);
 
       final filtered = data.entries
-          .map((entry) => SensorData.fromMap(entry.key as String,
-              Map<String, dynamic>.from(entry.value as Map)))
+          .map((e) => SensorData.fromMap(
+                e.key as String,
+                Map<String, dynamic>.from(e.value as Map),
+              ))
           .where((d) => d.timestamp.isAfter(oneHourAgo))
           .toList()
         ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
       _lastHourSensorData = filtered;
-      print('Received ${filtered.length} sensor entries');
       return filtered;
     });
   }
 
   List<SensorData> getLastHourDataCache() => _lastHourSensorData;
 }
-
 /// --- modelos simples ---
 
 class Crop {
