@@ -70,83 +70,99 @@ class _IrrigationSettingsPageState extends State<IrrigationSettingsPage> {
                     .toList(); // 0 ou 1
                 _selectedCrop = match.isNotEmpty ? match.first : crops.first;
               }
+              return StreamBuilder<bool>(
+                stream: us.isAdminStream,
+                initialData: true,
+                builder: (context, adminSnap) {
+                  final bool isAdmin = adminSnap.data ?? false;
+                  final bool isAssigned =
+                      allowedList.contains(_selectedCrop!.id);
 
-              final bool isAssigned = allowedList.contains(_selectedCrop!.id);
-
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ListView(
-                  children: [
-                    DropdownButtonFormField<Crop>(
-                      value: _selectedCrop,
-                      items: crops
-                          .map((c) =>
-                              DropdownMenuItem(value: c, child: Text(c.name)))
-                          .toList(),
-                      onChanged: (c) {
-                        if (c == null) return;
-                        setState(() => _selectedCrop = c);
-                        _populateControllers(c);
-                      },
-                      decoration:
-                          const InputDecoration(labelText: 'Select crop'),
-                    ),
-                    const SizedBox(height: 16),
-                    if (!isAssigned)
-                      Column(
-                        children: const [
-                          Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 48),
-                          SizedBox(height: 8),
-                          Text(
-                            'You are not assigned to this crop. Fields are disabled.',
-                            style: TextStyle(color: Colors.orange),
-                            textAlign: TextAlign.center,
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: ListView(
+                      children: [
+                        DropdownButtonFormField<Crop>(
+                          value: _selectedCrop,
+                          items: crops
+                              .map((c) => DropdownMenuItem(
+                                  value: c, child: Text(c.name)))
+                              .toList(),
+                          onChanged: (c) {
+                            if (c == null) return;
+                            setState(() => _selectedCrop = c);
+                            _populateControllers(c);
+                          },
+                          decoration:
+                              const InputDecoration(labelText: 'Select crop'),
+                        ),
+                        const SizedBox(height: 16),
+                        if (!isAdmin && !isAssigned)
+                          Column(
+                            children: const [
+                              Icon(Icons.warning_amber_rounded,
+                                  color: Colors.orange, size: 48),
+                              SizedBox(height: 8),
+                              Text(
+                                'You are not assigned to this crop. Fields are disabled.',
+                                style: TextStyle(color: Colors.orange),
+                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(height: 16),
+                            ],
                           ),
-                          SizedBox(height: 16),
-                        ],
-                      ),
+                        _rangeField('Humidity Min (%)', _humMin,
+                            isEnabled: isAssigned || isAdmin),
+                        _rangeField('Humidity Max (%)', _humMax,
+                            isEnabled:isAssigned || isAdmin),
+                        _rangeField('Temperature Min (°C)', _tempMin,
+                            isEnabled: isAssigned || isAdmin),
+                        _rangeField('Temperature Max (°C)', _tempMax,
+                            isEnabled: isAssigned || isAdmin),
+                        _rangeField('Light Min (lux)', _lightMin,
+                            isEnabled: isAssigned || isAdmin),
+                        _rangeField('Light Max (lux)', _lightMax,
+                            isEnabled: isAssigned || isAdmin),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _selectedCrop == null
+                              ? null
+                              : () async {
+                                  final settings = {
+                                    'humidity': {
+                                      'min': double.tryParse(_humMin.text) ?? 0,
+                                      'max': double.tryParse(_humMax.text) ?? 0,
+                                    },
+                                    'temperature': {
+                                      'min':
+                                          double.tryParse(_tempMin.text) ?? 0,
+                                      'max':
+                                          double.tryParse(_tempMax.text) ?? 0,
+                                    },
+                                    'light': {
+                                      'min':
+                                          double.tryParse(_lightMin.text) ?? 0,
+                                      'max':
+                                          double.tryParse(_lightMax.text) ?? 0,
+                                    },
+                                  };
 
-                    _rangeField('Humidity Min (%)', _humMin, isEnabled: isAssigned),
-                    _rangeField('Humidity Max (%)', _humMax, isEnabled: isAssigned),
-                    _rangeField('Temperature Min (°C)', _tempMin, isEnabled: isAssigned),
-                    _rangeField('Temperature Max (°C)', _tempMax, isEnabled: isAssigned),
-                    _rangeField('Light Min (lux)', _lightMin, isEnabled: isAssigned),
-                    _rangeField('Light Max (lux)', _lightMax, isEnabled: isAssigned),
+                                  await ds.updateCropSettings(
+                                      _selectedCrop!.id, settings);
 
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _selectedCrop == null
-                          ? null
-                          : () async {
-                              final settings = {
-                                'humidity': {
-                                  'min': double.tryParse(_humMin.text) ?? 0,
-                                  'max': double.tryParse(_humMax.text) ?? 0,
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('Settings saved')),
+                                    );
+                                  }
                                 },
-                                'temperature': {
-                                  'min': double.tryParse(_tempMin.text) ?? 0,
-                                  'max': double.tryParse(_tempMax.text) ?? 0,
-                                },
-                                'light': {
-                                  'min': double.tryParse(_lightMin.text) ?? 0,
-                                  'max': double.tryParse(_lightMax.text) ?? 0,
-                                },
-                              };
-
-                              await ds.updateCropSettings(
-                                  _selectedCrop!.id, settings);
-
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text('Settings saved')),
-                                );
-                              }
-                            },
-                      child: const Text('Save'),
+                          child: const Text('Save'),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               );
             },
           ),
@@ -168,8 +184,10 @@ class _IrrigationSettingsPageState extends State<IrrigationSettingsPage> {
     _lightMax.text = (light['max'] ?? '').toString();
   }
 
-  Widget _rangeField(String label, TextEditingController ctrl, {required bool isEnabled}) => Padding(
-  padding: const EdgeInsets.only(bottom: 12),
+  Widget _rangeField(String label, TextEditingController ctrl,
+          {required bool isEnabled}) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
         child: TextField(
           enabled: isEnabled,
           controller: ctrl,
