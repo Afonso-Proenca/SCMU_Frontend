@@ -115,32 +115,45 @@ class DataService {
     await _db.child('settings').set(s.toMap());
   }
 
-  
-  
+
+
 
  // ---------- Sensor data ----------
-  Stream<List<SensorData>> lastHourSensorDataStream(
-      String cropId, String cropType) {
-    final path = 'crops/$cropId/$cropType/sensors';
+  Stream<List<SensorData>> lastHourSensorDataStream(String cropId, String cropType) {
+    final path = 'crops/$cropId/sensors';
 
-    return _db.child(path).onValue.map((event) {
-      if (event.snapshot.value == null) return <SensorData>[];
+    //acumular dados do server
+    final List<SensorData> history = [];
+
+    return Stream.periodic(const Duration(seconds: 3)).asyncMap((_) async {
+      final snapshot = await _db.child(path).get();
+
+      if (snapshot.value == null) return history;
+
+      final data = Map<String, dynamic>.from(snapshot.value as Map);
 
       final now = DateTime.now();
+      final timestampMillis = now.millisecondsSinceEpoch;
+
+      //cria sensor data acrescentando o timestamp
+      final newData = SensorData(
+        id: timestampMillis.toString(),
+        timestamp: now,
+        temperature: (data['temperature'] as num).toDouble(),
+        moisture: (data['humidity'] as num).toDouble(),
+        light: (data['light'] as num).toDouble(),
+      );
+
+      print('New SensorData: ${newData.timestamp} → temp=${newData.temperature}, hum=${newData.moisture}, light=${newData.light}');
+
+      history.add(newData);
+
+      // guarda ultima hora (não sei se é preciso mais)
       final oneHourAgo = now.subtract(const Duration(hours: 1));
-      final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+      history.removeWhere((d) => d.timestamp.isBefore(oneHourAgo));
+      history.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-      final filtered = data.entries
-          .map((e) => SensorData.fromMap(
-                e.key as String,
-                Map<String, dynamic>.from(e.value as Map),
-              ))
-          .where((d) => d.timestamp.isAfter(oneHourAgo))
-          .toList()
-        ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-      _lastHourSensorData = filtered;
-      return filtered;
+      return List<SensorData>.from(history);
     });
   }
 
@@ -199,21 +212,19 @@ class WaterTankInfo {
 }
 
 class SensorData {
+  final String id;
   final DateTime timestamp;
-  final double moisture;
   final double temperature;
+  final double moisture;
+  final double light;
 
   SensorData({
+    required this.id,
     required this.timestamp,
-    required this.moisture,
     required this.temperature,
+    required this.moisture,
+    required this.light,
   });
 
-  factory SensorData.fromMap(String key, Map<String, dynamic> data) {
-    return SensorData(
-      timestamp: DateTime.fromMillisecondsSinceEpoch(int.tryParse(key) ?? 0),
-      moisture: (data['moisture'] as num).toDouble(),
-      temperature: (data['temperature'] as num).toDouble(),
-    );
-  }
 }
+

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -6,10 +8,36 @@ import '../services/data_service.dart';
 import '../services/user_service.dart';
 import 'package:firebase_database/firebase_database.dart';
 
-class CropDetailGate extends StatelessWidget {
+class CropDetailGate extends StatefulWidget {
   final Crop crop;
 
   const CropDetailGate({required this.crop, Key? key}) : super(key: key);
+  @override
+  _CropDetailGateState createState() => _CropDetailGateState();
+}
+
+class _CropDetailGateState extends State<CropDetailGate> {
+  bool showNoDataMessage = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(const Duration(seconds: 20), () {
+      if (mounted) {
+        setState(() {
+          showNoDataMessage = true;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -31,13 +59,13 @@ class CropDetailGate extends StatelessWidget {
           initialData: false,
           builder: (context, adminSnap) {
             final bool isAdmin = adminSnap.data ?? false;
-            final bool isAssigned = allowedList.contains(crop.id);
+            final bool isAssigned = allowedList.contains(widget.crop.id);
             print(
-                'CropDetailGate: isAdmin=$isAdmin, isAssigned=$isAssigned, cropId=${crop.id}, allowedList=$allowedList');
+                'CropDetailGate: isAdmin=$isAdmin, isAssigned=$isAssigned, cropId=${widget.crop.id}, allowedList=$allowedList');
 
             if (!isAssigned && !isAdmin){
               return Scaffold(
-                appBar: AppBar(title: Text('Crop • ${crop.name}')),
+                appBar: AppBar(title: Text('Crop • ${widget.crop.name}')),
                 body: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -65,12 +93,16 @@ class CropDetailGate extends StatelessWidget {
             // --------------------- página de detalhes ------------------------
 
                    return Scaffold(
-              appBar: AppBar(title: Text('Crop • ${crop.name}')),
+              appBar: AppBar(title: Text('Crop • ${widget.crop.name}')),
               body: StreamBuilder<List<SensorData>>(
-                stream: ds.lastHourSensorDataStream(crop.id,crop.type),
+                stream: ds.lastHourSensorDataStream(widget.crop.id,widget.crop.type),
                 builder: (_, snap) {
                   if (!snap.hasData || snap.data!.isEmpty) {
-                    return const Center(child: Text('No sensor data…'));
+                    if (snap.connectionState == ConnectionState.waiting && !showNoDataMessage) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else {
+                      return const Center(child: Text('No sensor data yet'));
+                    }
                   }
                   final data = snap.data!;
 
@@ -86,7 +118,7 @@ class CropDetailGate extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Type: ${crop.type}',
+                        Text('Type: ${widget.crop.type}',
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 16),
                         Expanded(
