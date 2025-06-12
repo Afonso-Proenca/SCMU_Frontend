@@ -107,6 +107,53 @@ class _CropDetailGateState extends State<CropDetailGate> {
             Text('Type: ${widget.crop.type}',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
+            // ── Legenda no canto superior-direito da tela (não sobrepõe gráfico)
+
+            Align(
+
+              alignment: Alignment.topRight,
+
+              child: Card(
+
+                elevation: 2,
+
+                color: Theme.of(context).cardColor.withOpacity(0.9),
+
+                child: Padding(
+
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+
+                  child: Column(
+
+                    mainAxisSize: MainAxisSize.min,
+
+                    crossAxisAlignment: CrossAxisAlignment.start,
+
+                    children: const [
+
+                      _LegendDot(label: 'Temperature (°C)', color: Colors.redAccent),
+
+                      SizedBox(height: 4),
+
+                      _LegendDot(label: 'Humidity (%)',     color: Colors.blueAccent),
+
+                      SizedBox(height: 4),
+
+                      _LegendDot(label: 'Light',             color: Colors.amber),
+
+                    ],
+
+                  ),
+
+                ),
+
+              ),
+
+            ),
+
+            const SizedBox(height: 8),
+
+
             Expanded(
               child: _sensorData.isEmpty
                   ? const Center(child: Text('No sensor data yet'))
@@ -167,38 +214,7 @@ class _CropDetailGateState extends State<CropDetailGate> {
                       ],
                     ),
                   ),
-                  Positioned(
-                    top: 8,
-                    left: 5,
-                    child: IgnorePointer(
-                      ignoring: true,
-                      child: Card(
-                        elevation: 2,
-                        color:
-                        Theme.of(context).cardColor.withOpacity(0.9),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              _LegendDot(
-                                  label: 'Temperature (°C)',
-                                  color: Colors.redAccent),
-                              SizedBox(height: 4),
-                              _LegendDot(
-                                  label: 'Humidity (%)',
-                                  color: Colors.blueAccent),
-                              SizedBox(height: 4),
-                              _LegendDot(
-                                  label: 'Light', color: Colors.amber),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+
                 ],
               ),
             ),
